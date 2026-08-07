@@ -58,7 +58,6 @@ button{cursor:pointer}
 .card-title{font-size:17px;font-weight:800}.price{font-size:18px;font-weight:900;margin-top:8px}
 .actions{display:flex;gap:8px;margin-top:14px}.actions button{flex:1}
 .empty{padding:50px 20px;text-align:center;border:1px dashed #33333b;border-radius:18px;color:#aaa;margin-bottom:60px}
-.admin-note{font-size:12px;color:#777;margin-top:8px}
 footer{border-top:1px solid #1f1f24;padding:24px 0 40px;color:#777;font-size:12px}
 dialog{
   width:min(520px,calc(100% - 28px));border:1px solid #33333b;background:#121216;color:#fff;
@@ -81,6 +80,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
   padding:11px 14px;font-weight:700;box-shadow:0 12px 36px rgba(0,0,0,.35);opacity:0;transform:translateY(8px);pointer-events:none;transition:.2s
 }
 .toast.show{opacity:1;transform:none}
+.status{font-size:12px;color:#777}
 @media(max-width:850px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.grid{grid-template-columns:1fr}.hero{padding-top:42px}.hero h2{font-size:46px}.row{grid-template-columns:1fr}.section-head{align-items:center}}
 </style>
@@ -98,16 +98,13 @@ dialog input:focus,dialog select:focus{border-color:#666}
   <section class="hero">
     <div class="eyebrow">NENEI SHOP</div>
     <h2>把喜歡的東西，<br>好好放在這裡。</h2>
-    <p>家具、作物、男女戒指分開看，圖片、名稱、價格一眼就能看到。這一版不用伺服器，直接雙擊 HTML 就能使用。</p>
+    <p>家具、作物、男女戒指分開看，圖片、名稱、價格一眼就能看到。</p>
   </section>
 
   <section class="toolbar">
     <input id="searchInput" class="search" placeholder="搜尋商品名稱…">
     <button id="addBtn" class="btn primary hidden">＋ 新增商品</button>
-    <button id="exportBtn" class="btn hidden">匯出資料</button>
-    <label id="importLabel" class="btn hidden" style="display:inline-flex;align-items:center;gap:8px">
-      匯入資料<input id="importInput" type="file" accept=".json" hidden>
-    </label>
+    <span id="status" class="status">正在連線…</span>
   </section>
 
   <nav class="tabs">
@@ -126,14 +123,15 @@ dialog input:focus,dialog select:focus{border-color:#666}
   <div id="empty" class="empty hidden">目前沒有符合條件的商品。</div>
 </main>
 
-<footer><div class="wrap">© 內內｜本機版商品小舖</div></footer>
+<footer><div class="wrap">© 內內｜nene-sell.github.io</div></footer>
 
 <dialog id="loginDialog">
   <form id="loginForm">
     <button type="button" class="close" data-close="loginDialog">×</button>
     <h3>管理員登入</h3>
-    <p>第一次使用預設密碼為 <b>1234</b>。登入後可以在「管理員設定」修改。</p>
-    <label>密碼<input id="loginPassword" type="password" placeholder="輸入管理員密碼" required></label>
+    <p>請使用你剛才在 Firebase Authentication 建立的管理員帳號。</p>
+    <label>Email<input id="loginEmail" type="email" autocomplete="username" required></label>
+    <label>密碼<input id="loginPassword" type="password" autocomplete="current-password" required></label>
     <div id="loginError" class="error"></div>
     <button class="btn primary full" type="submit">登入</button>
   </form>
@@ -164,221 +162,296 @@ dialog input:focus,dialog select:focus{border-color:#666}
       <input id="productImage" type="file" accept="image/*">
     </label>
     <img id="preview" class="preview hidden" alt="預覽">
-    <div class="notice">圖片會存進這台電腦的瀏覽器資料裡。建議商品圖先壓小一點，網站會跑得比較順。</div>
+    <div class="notice">圖片會在上架前自動縮小壓縮，再和商品資料一起存到 Firestore。建議原圖不要太誇張大張。</div>
     <div id="productError" class="error"></div>
-    <button class="btn primary full" type="submit">儲存商品</button>
-  </form>
-</dialog>
-
-<dialog id="settingsDialog">
-  <form id="settingsForm">
-    <button type="button" class="close" data-close="settingsDialog">×</button>
-    <h3>管理員設定</h3>
-    <p>這是「本機版」登入，只適合你自己在電腦上使用；不是網路伺服器等級的安全登入。</p>
-    <label>新密碼<input id="newPassword" type="password" minlength="4" placeholder="至少 4 碼" required></label>
-    <button class="btn primary full" type="submit">修改密碼</button>
+    <button id="saveProductBtn" class="btn primary full" type="submit">儲存商品</button>
   </form>
 </dialog>
 
 <div id="toast" class="toast">已儲存</div>
 
-<script>
-(() => {
-  const STORAGE_KEY = "nenei_shop_products_v1";
-  const PASS_KEY = "nenei_shop_password_v1";
-  let isAdmin = false;
-  let activeCategory = "全部";
-  let editingImage = "";
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import {
+  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
+  onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-  const $ = s => document.querySelector(s);
-  const $$ = s => [...document.querySelectorAll(s)];
+const firebaseConfig = {
+  apiKey: "AIzaSyAHhPD_c7mJbzQKF1YnrySpBSLLs-IecAw",
+  authDomain: "nene-sell.firebaseapp.com",
+  projectId: "nene-sell",
+  storageBucket: "nene-sell.firebasestorage.app",
+  messagingSenderId: "612122074185",
+  appId: "1:612122074185:web:9eb29bd13ff79eec6e7398"
+};
 
-  const makePlaceholder = (label, tone="#1d1d22") =>
-    "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800">
-        <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-          <stop stop-color="${tone}"/><stop offset="1" stop-color="#09090b"/>
-        </linearGradient></defs>
-        <rect width="800" height="800" fill="url(#g)"/>
-        <text x="400" y="390" fill="#ffffff" text-anchor="middle" font-size="66" font-family="Arial" font-weight="700">${label}</text>
-        <text x="400" y="455" fill="#8f8f99" text-anchor="middle" font-size="28" font-family="Arial">NENEI SHOP</text>
-      </svg>`);
+const ADMIN_UID = "m6CfH9lsrmbG4Mw8SzgmlZL8R2i1";
 
-  const sampleProducts = [
-    {id:"sample1",category:"家具",name:"黑色系家具範例",price:"80 糖",image:makePlaceholder("家具","#222228")},
-    {id:"sample2",category:"作物",name:"可愛作物範例",price:"120 糖",image:makePlaceholder("作物","#24211d")},
-    {id:"sample3",category:"戒指限男",name:"男戒範例",price:"200 糖",image:makePlaceholder("戒指限男","#1d2025")},
-    {id:"sample4",category:"戒指限女",name:"女戒範例",price:"200 糖",image:makePlaceholder("戒指限女","#241d24")}
-  ];
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-  function loadProducts(){
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if(!raw){
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleProducts));
-        return [...sampleProducts];
-      }
-      return JSON.parse(raw);
-    }catch(e){ return [...sampleProducts]; }
-  }
-  let products = loadProducts();
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
 
-  function saveProducts(){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-    render();
-    toast("已儲存");
-  }
+let products = [];
+let activeCategory = "全部";
+let currentUser = null;
+let editingImage = "";
 
-  function toast(msg){
-    const t=$("#toast"); t.textContent=msg; t.classList.add("show");
-    setTimeout(()=>t.classList.remove("show"),1300);
-  }
+function isAdmin(){
+  return currentUser && currentUser.uid === ADMIN_UID;
+}
 
-  function esc(s=""){
-    return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
-  }
+function toast(msg){
+  const t=$("#toast");
+  t.textContent=msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),1400);
+}
 
-  function render(){
-    const q=$("#searchInput").value.trim().toLowerCase();
-    let list = products.filter(p => activeCategory==="全部" || p.category===activeCategory);
-    if(q) list=list.filter(p => p.name.toLowerCase().includes(q) || p.price.toLowerCase().includes(q));
-    $("#productCount").textContent=`${list.length} 件商品`;
-    $("#sectionTitle").textContent=activeCategory==="全部"?"全部商品":activeCategory;
-    $("#grid").innerHTML="";
-    $("#empty").classList.toggle("hidden", list.length!==0);
+function esc(s=""){
+  return String(s)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;");
+}
 
-    list.forEach(p=>{
-      const card=document.createElement("article");
-      card.className="card";
-      card.innerHTML=`
-        <div class="card-media"><img src="${p.image}" alt="${esc(p.name)}"></div>
-        <div class="card-body">
-          <span class="badge">${esc(p.category)}</span>
-          <div class="card-title">${esc(p.name)}</div>
-          <div class="price">${esc(p.price)}</div>
-          ${isAdmin?`<div class="actions"><button class="btn edit">編輯</button><button class="btn danger delete">刪除</button></div>`:""}
-        </div>`;
-      if(isAdmin){
-        card.querySelector(".edit").onclick=()=>openProduct(p);
-        card.querySelector(".delete").onclick=()=>deleteProduct(p.id);
-      }
-      $("#grid").appendChild(card);
-    });
-
-    $("#addBtn").classList.toggle("hidden",!isAdmin);
-    $("#exportBtn").classList.toggle("hidden",!isAdmin);
-    $("#importLabel").classList.toggle("hidden",!isAdmin);
-    $("#adminBtn").textContent=isAdmin?"管理員選單":"管理員登入";
+function render(){
+  const q=$("#searchInput").value.trim().toLowerCase();
+  let list = products.filter(p => activeCategory==="全部" || p.category===activeCategory);
+  if(q){
+    list = list.filter(p =>
+      String(p.name||"").toLowerCase().includes(q) ||
+      String(p.price||"").toLowerCase().includes(q)
+    );
   }
 
-  function openProduct(p=null){
-    $("#productDialogTitle").textContent=p?"編輯商品":"新增商品";
-    $("#productId").value=p?.id||"";
-    $("#productCategory").value=p?.category||"家具";
-    $("#productName").value=p?.name||"";
-    $("#productPrice").value=p?.price||"";
-    $("#productImage").value="";
-    editingImage=p?.image||"";
-    if(editingImage){$("#preview").src=editingImage;$("#preview").classList.remove("hidden")}
-    else{$("#preview").src="";$("#preview").classList.add("hidden")}
-    $("#productError").textContent="";
-    $("#productDialog").showModal();
-  }
+  $("#productCount").textContent=`${list.length} 件商品`;
+  $("#sectionTitle").textContent=activeCategory==="全部"?"全部商品":activeCategory;
+  $("#grid").innerHTML="";
+  $("#empty").classList.toggle("hidden", list.length!==0);
 
-  function deleteProduct(id){
-    const p=products.find(x=>x.id===id);
-    if(!confirm(`確定刪除「${p?.name||"這件商品"}」？`))return;
-    products=products.filter(x=>x.id!==id);
-    saveProducts();
-  }
-
-  $("#productImage").addEventListener("change", e=>{
-    const file=e.target.files[0]; if(!file)return;
-    if(file.size>2.5*1024*1024){
-      $("#productError").textContent="圖片太大，建議 2.5MB 以下。";
-      e.target.value=""; return;
+  list.forEach(p=>{
+    const card=document.createElement("article");
+    card.className="card";
+    card.innerHTML=`
+      <div class="card-media"><img src="${p.imageData || ""}" alt="${esc(p.name)}"></div>
+      <div class="card-body">
+        <span class="badge">${esc(p.category)}</span>
+        <div class="card-title">${esc(p.name)}</div>
+        <div class="price">${esc(p.price)}</div>
+        ${isAdmin()?`<div class="actions"><button class="btn edit">編輯</button><button class="btn danger delete">刪除</button></div>`:""}
+      </div>`;
+    if(isAdmin()){
+      card.querySelector(".edit").onclick=()=>openProduct(p);
+      card.querySelector(".delete").onclick=()=>deleteProduct(p);
     }
+    $("#grid").appendChild(card);
+  });
+
+  $("#addBtn").classList.toggle("hidden", !isAdmin());
+  $("#adminBtn").textContent=isAdmin() ? "管理員登出" : "管理員登入";
+}
+
+async function compressImage(file){
+  const dataUrl = await new Promise((resolve,reject)=>{
     const reader=new FileReader();
-    reader.onload=()=>{editingImage=reader.result;$("#preview").src=editingImage;$("#preview").classList.remove("hidden")};
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=reject;
     reader.readAsDataURL(file);
   });
 
-  $("#productForm").addEventListener("submit", e=>{
-    e.preventDefault();
-    if(!editingImage){$("#productError").textContent="請選擇商品圖片";return}
+  const img = await new Promise((resolve,reject)=>{
+    const i=new Image();
+    i.onload=()=>resolve(i);
+    i.onerror=reject;
+    i.src=dataUrl;
+  });
+
+  const maxSide = 900;
+  const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+  const w = Math.max(1, Math.round(img.width * scale));
+  const h = Math.max(1, Math.round(img.height * scale));
+
+  const canvas=document.createElement("canvas");
+  canvas.width=w; canvas.height=h;
+  const ctx=canvas.getContext("2d");
+  ctx.drawImage(img,0,0,w,h);
+
+  let quality=0.78;
+  let out=canvas.toDataURL("image/jpeg",quality);
+
+  // Firestore document max size is 1 MiB. Keep image comfortably below that.
+  while(out.length > 650000 && quality > 0.38){
+    quality -= 0.08;
+    out=canvas.toDataURL("image/jpeg",quality);
+  }
+
+  if(out.length > 780000){
+    throw new Error("這張圖片壓縮後還是太大，請換小一點的圖片。");
+  }
+  return out;
+}
+
+function openProduct(p=null){
+  $("#productDialogTitle").textContent=p?"編輯商品":"新增商品";
+  $("#productId").value=p?.id||"";
+  $("#productCategory").value=p?.category||"家具";
+  $("#productName").value=p?.name||"";
+  $("#productPrice").value=p?.price||"";
+  $("#productImage").value="";
+  editingImage=p?.imageData||"";
+  $("#productError").textContent="";
+  if(editingImage){
+    $("#preview").src=editingImage;
+    $("#preview").classList.remove("hidden");
+  }else{
+    $("#preview").src="";
+    $("#preview").classList.add("hidden");
+  }
+  $("#productDialog").showModal();
+}
+
+$("#productImage").addEventListener("change", async e=>{
+  const file=e.target.files[0];
+  if(!file)return;
+  $("#productError").textContent="圖片處理中…";
+  try{
+    editingImage=await compressImage(file);
+    $("#preview").src=editingImage;
+    $("#preview").classList.remove("hidden");
+    $("#productError").textContent="";
+  }catch(err){
+    editingImage="";
+    $("#preview").classList.add("hidden");
+    $("#productError").textContent=err.message||"圖片處理失敗";
+  }
+});
+
+$("#productForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  if(!isAdmin()){
+    $("#productError").textContent="管理員尚未登入";
+    return;
+  }
+  if(!editingImage){
+    $("#productError").textContent="請選擇商品圖片";
+    return;
+  }
+
+  const saveBtn=$("#saveProductBtn");
+  saveBtn.disabled=true;
+  saveBtn.textContent="儲存中…";
+  $("#productError").textContent="";
+
+  try{
     const id=$("#productId").value;
-    const data={
-      id:id||("p_"+Date.now()+"_"+Math.random().toString(36).slice(2,7)),
+    const payload={
       category:$("#productCategory").value,
       name:$("#productName").value.trim(),
       price:$("#productPrice").value.trim(),
-      image:editingImage
+      imageData:editingImage,
+      updatedAt:serverTimestamp()
     };
+
     if(id){
-      const idx=products.findIndex(p=>p.id===id); if(idx>=0)products[idx]=data;
-    }else products.unshift(data);
-    try{
-      saveProducts(); $("#productDialog").close(); $("#productForm").reset();
-    }catch(err){
-      $("#productError").textContent="儲存空間可能滿了，請匯出備份後刪掉較大的圖片。";
+      await updateDoc(doc(db,"products",id),payload);
+    }else{
+      await addDoc(collection(db,"products"),{
+        ...payload,
+        createdAt:serverTimestamp()
+      });
     }
-  });
 
-  $("#loginForm").addEventListener("submit", e=>{
-    e.preventDefault();
-    const pass=localStorage.getItem(PASS_KEY)||"1234";
-    if($("#loginPassword").value===pass){
-      isAdmin=true; $("#loginDialog").close(); $("#loginForm").reset(); render(); toast("管理員已登入");
-    }else $("#loginError").textContent="密碼不正確";
-  });
+    $("#productDialog").close();
+    $("#productForm").reset();
+    editingImage="";
+    toast("商品已儲存");
+  }catch(err){
+    console.error(err);
+    $("#productError").textContent=err.message||"商品儲存失敗";
+  }finally{
+    saveBtn.disabled=false;
+    saveBtn.textContent="儲存商品";
+  }
+});
 
-  $("#adminBtn").onclick=()=>{
-    if(!isAdmin){$("#loginError").textContent="";$("#loginDialog").showModal();return}
-    const choice=prompt("管理員選單\\n1 = 登出\\n2 = 修改密碼\\n請輸入 1 或 2");
-    if(choice==="1"){isAdmin=false;render();toast("已登出")}
-    if(choice==="2")$("#settingsDialog").showModal();
-  };
+async function deleteProduct(p){
+  if(!isAdmin())return;
+  if(!confirm(`確定刪除「${p.name}」？`))return;
+  try{
+    await deleteDoc(doc(db,"products",p.id));
+    toast("商品已刪除");
+  }catch(err){
+    alert(err.message||"刪除失敗");
+  }
+}
 
-  $("#settingsForm").addEventListener("submit",e=>{
-    e.preventDefault();
-    localStorage.setItem(PASS_KEY,$("#newPassword").value);
-    $("#settingsDialog").close();$("#settingsForm").reset();toast("密碼已修改");
-  });
+$("#loginForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  $("#loginError").textContent="";
+  try{
+    const cred=await signInWithEmailAndPassword(
+      auth,
+      $("#loginEmail").value.trim(),
+      $("#loginPassword").value
+    );
+    if(cred.user.uid !== ADMIN_UID){
+      await signOut(auth);
+      throw new Error("這個帳號不是管理員");
+    }
+    $("#loginDialog").close();
+    $("#loginForm").reset();
+    toast("管理員已登入");
+  }catch(err){
+    console.error(err);
+    $("#loginError").textContent="登入失敗，請確認 Email 和密碼。";
+  }
+});
 
-  $("#addBtn").onclick=()=>openProduct();
-  $("#searchInput").oninput=render;
-  $$(".tab").forEach(btn=>btn.onclick=()=>{
-    activeCategory=btn.dataset.category;
-    $$(".tab").forEach(x=>x.classList.toggle("active",x===btn));
-    render();
-  });
-  $$("[data-close]").forEach(btn=>btn.onclick=()=>document.getElementById(btn.dataset.close).close());
+$("#adminBtn").onclick=async()=>{
+  if(isAdmin()){
+    await signOut(auth);
+    toast("已登出");
+  }else{
+    $("#loginError").textContent="";
+    $("#loginDialog").showModal();
+  }
+};
 
-  $("#exportBtn").onclick=()=>{
-    const blob=new Blob([JSON.stringify(products,null,2)],{type:"application/json"});
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(blob);a.download="nenei-shop-backup.json";a.click();
-    URL.revokeObjectURL(a.href);
-  };
-
-  $("#importInput").onchange=e=>{
-    const file=e.target.files[0];if(!file)return;
-    const reader=new FileReader();
-    reader.onload=()=>{
-      try{
-        const data=JSON.parse(reader.result);
-        if(!Array.isArray(data))throw new Error();
-        if(confirm("匯入會覆蓋目前商品資料，確定嗎？")){
-          products=data;saveProducts();
-        }
-      }catch(err){alert("這不是有效的內內商店備份檔")}
-      e.target.value="";
-    };
-    reader.readAsText(file);
-  };
-
+onAuthStateChanged(auth,user=>{
+  currentUser = user && user.uid===ADMIN_UID ? user : null;
   render();
-})();
+});
+
+$("#addBtn").onclick=()=>openProduct();
+$("#searchInput").oninput=render;
+$$(".tab").forEach(btn=>btn.onclick=()=>{
+  activeCategory=btn.dataset.category;
+  $$(".tab").forEach(x=>x.classList.toggle("active",x===btn));
+  render();
+});
+$$("[data-close]").forEach(btn=>btn.onclick=()=>document.getElementById(btn.dataset.close).close());
+
+onSnapshot(
+  collection(db,"products"),
+  snap=>{
+    products=snap.docs.map(d=>({id:d.id,...d.data()}));
+    products.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+    $("#status").textContent="已連線";
+    render();
+  },
+  err=>{
+    console.error(err);
+    $("#status").textContent="資料讀取失敗";
+  }
+);
 </script>
 </body>
 </html>
