@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>內內</title>
+<title>內內｜商品小舖</title>
 <style>
 :root{
   --bg:#09090b; --panel:#111116; --panel2:#17171d; --line:#2a2a31;
@@ -89,16 +89,16 @@ dialog input:focus,dialog select:focus{border-color:#666}
 <header class="topbar">
   <div class="brand">
     <div class="logo">內</div>
-    <div><h1>內內</h1><small>家具・作物・戒指限男・戒指限女</small></div>
+    <div><h1>內內</h1><small>家具・花盆・戒指限男・戒指限女・作物・收購區</small></div>
   </div>
   <button id="adminBtn" class="btn">管理員登入</button>
 </header>
 
 <main class="wrap">
   <section class="hero">
-    <div class="eyebrow">NENEI SHOP</div>
-    <h2>男女皆可交易，<br>糖T可。</h2>
-    <p>家具、作物、男女戒指分開看，圖片、名稱、價格一眼就能看到。</p>
+    <div class="eyebrow">男女皆可交易，未滿百可糖；主要收T</div>
+    
+    <p>戒指的話，情侶等級須由買家出</p>
   </section>
 
   <section class="toolbar">
@@ -110,9 +110,11 @@ dialog input:focus,dialog select:focus{border-color:#666}
   <nav class="tabs">
     <button class="tab active" data-category="全部">全部</button>
     <button class="tab" data-category="家具">家具</button>
-    <button class="tab" data-category="作物">作物</button>
+    <button class="tab" data-category="花盆">花盆</button>
     <button class="tab" data-category="戒指限男">戒指限男</button>
     <button class="tab" data-category="戒指限女">戒指限女</button>
+    <button class="tab" data-category="作物">作物</button>
+    <button class="tab" data-category="收購區">收購區</button>
   </nav>
 
   <section class="section-head">
@@ -146,9 +148,11 @@ dialog input:focus,dialog select:focus{border-color:#666}
       <label>分類
         <select id="productCategory" required>
           <option value="家具">家具</option>
-          <option value="作物">作物</option>
+          <option value="花盆">花盆</option>
           <option value="戒指限男">戒指限男</option>
           <option value="戒指限女">戒指限女</option>
+          <option value="作物">作物</option>
+          <option value="收購區">收購區</option>
         </select>
       </label>
       <label>價格
