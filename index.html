@@ -480,3 +480,36 @@ onSnapshot(
   font-weight:600;
 }
 </style>
+
+
+<style>
+/* 管理員登入／新增商品視窗：提高可讀性 */
+dialog{
+  background:#eadbcf !important;
+  color:#40342d !important;
+  border:1px solid #bca692 !important;
+}
+dialog h3, dialog label, dialog .muted{
+  color:#40342d !important;
+}
+dialog input,
+dialog select{
+  background:#d4bda9 !important;
+  color:#382d27 !important;
+  border:1px solid #aa907a !important;
+  font-weight:600;
+}
+dialog input::placeholder{
+  color:#79675b !important;
+  opacity:1;
+}
+dialog input:focus,
+dialog select:focus{
+  border-color:#806754 !important;
+  box-shadow:0 0 0 2px rgba(128,103,84,.15);
+}
+dialog select option{
+  background:#f0e4da !important;
+  color:#382d27 !important;
+}
+</style>
