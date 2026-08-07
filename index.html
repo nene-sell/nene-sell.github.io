@@ -112,7 +112,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
   <section class="toolbar">
     <input id="searchInput" class="search" placeholder="搜尋商品名稱…">
     <button id="addBtn" class="btn primary hidden">＋ 新增商品</button>
-    <span id="status" class="status hidden">正在連線…</span>
+    <span id="status" style="display:none!important"></span>
   </section>
 
   <nav class="tabs">
@@ -463,3 +463,5 @@ onSnapshot(
 </script>
 </body>
 </html>
+
+<style>#status{display:none!important}</style>
