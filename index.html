@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>內內｜商品小舖</title>
+<style>
+:root{
+  --bg:#09090b; --panel:#111116; --panel2:#17171d; --line:#2a2a31;
+  --text:#f5f5f7; --muted:#9b9ba6; --soft:#cfcfd6; --danger:#ff6b76;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;color:var(--text);background:
+  radial-gradient(circle at 20% -10%,rgba(255,255,255,.07),transparent 30%),
+  linear-gradient(180deg,#08080a 0%,#0c0c0f 100%);
+  font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+  min-height:100vh;
+}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+.topbar{
+  position:sticky;top:0;z-index:20;display:flex;justify-content:space-between;align-items:center;
+  gap:16px;padding:15px clamp(16px,5vw,64px);background:rgba(9,9,11,.9);
+  border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(14px)
+}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:42px;height:42px;border-radius:14px;background:#fff;color:#111;display:grid;place-items:center;font-weight:900}
+.brand h1{font-size:20px;margin:0}.brand small{color:var(--muted)}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:10px 14px;border-radius:12px}
+.btn:hover{border-color:#555}
+.btn.primary{background:#fff;color:#111;border-color:#fff;font-weight:800}
+.btn.danger{color:#ff939a}
+.wrap{width:min(1180px,calc(100% - 32px));margin:auto}
+.hero{padding:62px 0 34px}
+.eyebrow{font-size:12px;letter-spacing:.25em;color:#aaa}
+.hero h2{font-size:clamp(42px,7vw,78px);line-height:1.02;margin:12px 0 16px;letter-spacing:-.05em}
+.hero p{color:var(--muted);line-height:1.8}
+.toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+.search{
+  flex:1;min-width:220px;border:1px solid var(--line);background:#0f0f13;color:#fff;
+  padding:11px 13px;border-radius:12px;outline:none
+}
+.search:focus{border-color:#666}
+.tabs{display:flex;gap:8px;overflow:auto;padding:2px 0 18px}
+.tab{white-space:nowrap;border:1px solid var(--line);background:#141419;color:#c8c8cf;padding:10px 14px;border-radius:999px}
+.tab.active{background:#fff;color:#111;border-color:#fff;font-weight:800}
+.section-head{display:flex;justify-content:space-between;align-items:end;gap:12px;margin:10px 0 18px}
+.section-head h3{margin:0;font-size:24px}.section-head p{margin:6px 0 0;color:var(--muted);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding-bottom:60px}
+.card{border:1px solid var(--line);background:linear-gradient(180deg,#141419,#0f0f13);border-radius:18px;overflow:hidden}
+.card-media{aspect-ratio:1/1;background:#1c1c22;overflow:hidden}
+.card-media img{width:100%;height:100%;object-fit:cover;display:block;transition:.2s}
+.card:hover img{transform:scale(1.02)}
+.card-body{padding:14px}
+.badge{display:inline-block;font-size:11px;color:#aaa;border:1px solid #33333b;border-radius:999px;padding:4px 8px;margin-bottom:8px}
+.card-title{font-size:17px;font-weight:800}.price{font-size:18px;font-weight:900;margin-top:8px}
+.actions{display:flex;gap:8px;margin-top:14px}.actions button{flex:1}
+.empty{padding:50px 20px;text-align:center;border:1px dashed #33333b;border-radius:18px;color:#aaa;margin-bottom:60px}
+.admin-note{font-size:12px;color:#777;margin-top:8px}
+footer{border-top:1px solid #1f1f24;padding:24px 0 40px;color:#777;font-size:12px}
+dialog{
+  width:min(520px,calc(100% - 28px));border:1px solid #33333b;background:#121216;color:#fff;
+  border-radius:18px;padding:0;box-shadow:0 28px 100px rgba(0,0,0,.65)
+}
+dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(6px)}
+dialog form{position:relative;padding:26px;display:grid;gap:15px}
+dialog h3{margin:0 0 2px;font-size:24px}dialog p{margin:0;color:var(--muted);font-size:13px;line-height:1.6}
+dialog label{display:grid;gap:8px;font-size:13px;color:#ddd}
+dialog input,dialog select{background:#0b0b0e;color:#fff;border:1px solid #33333b;border-radius:11px;padding:11px 12px;outline:none}
+dialog input:focus,dialog select:focus{border-color:#666}
+.close{position:absolute;right:16px;top:14px;width:34px;height:34px;border:0;background:#1c1c22;color:#fff;border-radius:10px;font-size:20px}
+.full{width:100%}
+.preview{width:100%;max-height:300px;object-fit:contain;border:1px solid #2c2c33;border-radius:12px;background:#0a0a0c}
+.error{min-height:16px;color:#ff7e87;font-size:12px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.notice{padding:11px 13px;border:1px solid #292931;background:#0f0f13;border-radius:12px;color:#aaa;font-size:12px;line-height:1.6}
+.toast{
+  position:fixed;right:18px;bottom:18px;z-index:99;background:#fff;color:#111;border-radius:12px;
+  padding:11px 14px;font-weight:700;box-shadow:0 12px 36px rgba(0,0,0,.35);opacity:0;transform:translateY(8px);pointer-events:none;transition:.2s
+}
+.toast.show{opacity:1;transform:none}
+@media(max-width:850px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.grid{grid-template-columns:1fr}.hero{padding-top:42px}.hero h2{font-size:46px}.row{grid-template-columns:1fr}.section-head{align-items:center}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">內</div>
+    <div><h1>內內</h1><small>家具・作物・戒指限男・戒指限女</small></div>
+  </div>
+  <button id="adminBtn" class="btn">管理員登入</button>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="eyebrow">NENEI SHOP</div>
+    <h2>把喜歡的東西，<br>好好放在這裡。</h2>
+    <p>家具、作物、男女戒指分開看，圖片、名稱、價格一眼就能看到。這一版不用伺服器，直接雙擊 HTML 就能使用。</p>
+  </section>
+
+  <section class="toolbar">
+    <input id="searchInput" class="search" placeholder="搜尋商品名稱…">
+    <button id="addBtn" class="btn primary hidden">＋ 新增商品</button>
+    <button id="exportBtn" class="btn hidden">匯出資料</button>
+    <label id="importLabel" class="btn hidden" style="display:inline-flex;align-items:center;gap:8px">
+      匯入資料<input id="importInput" type="file" accept=".json" hidden>
+    </label>
+  </section>
+
+  <nav class="tabs">
+    <button class="tab active" data-category="全部">全部</button>
+    <button class="tab" data-category="家具">家具</button>
+    <button class="tab" data-category="作物">作物</button>
+    <button class="tab" data-category="戒指限男">戒指限男</button>
+    <button class="tab" data-category="戒指限女">戒指限女</button>
+  </nav>
+
+  <section class="section-head">
+    <div><h3 id="sectionTitle">全部商品</h3><p id="productCount">0 件商品</p></div>
+  </section>
+
+  <section id="grid" class="grid"></section>
+  <div id="empty" class="empty hidden">目前沒有符合條件的商品。</div>
+</main>
+
+<footer><div class="wrap">© 內內｜本機版商品小舖</div></footer>
+
+<dialog id="loginDialog">
+  <form id="loginForm">
+    <button type="button" class="close" data-close="loginDialog">×</button>
+    <h3>管理員登入</h3>
+    <p>第一次使用預設密碼為 <b>1234</b>。登入後可以在「管理員設定」修改。</p>
+    <label>密碼<input id="loginPassword" type="password" placeholder="輸入管理員密碼" required></label>
+    <div id="loginError" class="error"></div>
+    <button class="btn primary full" type="submit">登入</button>
+  </form>
+</dialog>
+
+<dialog id="productDialog">
+  <form id="productForm">
+    <button type="button" class="close" data-close="productDialog">×</button>
+    <h3 id="productDialogTitle">新增商品</h3>
+    <input id="productId" type="hidden">
+    <div class="row">
+      <label>分類
+        <select id="productCategory" required>
+          <option value="家具">家具</option>
+          <option value="作物">作物</option>
+          <option value="戒指限男">戒指限男</option>
+          <option value="戒指限女">戒指限女</option>
+        </select>
+      </label>
+      <label>價格
+        <input id="productPrice" placeholder="例如：80 糖" required maxlength="40">
+      </label>
+    </div>
+    <label>名稱
+      <input id="productName" placeholder="例如：黑色鹿角裝飾" required maxlength="80">
+    </label>
+    <label>圖片
+      <input id="productImage" type="file" accept="image/*">
+    </label>
+    <img id="preview" class="preview hidden" alt="預覽">
+    <div class="notice">圖片會存進這台電腦的瀏覽器資料裡。建議商品圖先壓小一點，網站會跑得比較順。</div>
+    <div id="productError" class="error"></div>
+    <button class="btn primary full" type="submit">儲存商品</button>
+  </form>
+</dialog>
+
+<dialog id="settingsDialog">
+  <form id="settingsForm">
+    <button type="button" class="close" data-close="settingsDialog">×</button>
+    <h3>管理員設定</h3>
+    <p>這是「本機版」登入，只適合你自己在電腦上使用；不是網路伺服器等級的安全登入。</p>
+    <label>新密碼<input id="newPassword" type="password" minlength="4" placeholder="至少 4 碼" required></label>
+    <button class="btn primary full" type="submit">修改密碼</button>
+  </form>
+</dialog>
+
+<div id="toast" class="toast">已儲存</div>
+
+<script>
+(() => {
+  const STORAGE_KEY = "nenei_shop_products_v1";
+  const PASS_KEY = "nenei_shop_password_v1";
+  let isAdmin = false;
+  let activeCategory = "全部";
+  let editingImage = "";
+
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+
+  const makePlaceholder = (label, tone="#1d1d22") =>
+    "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800">
+        <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop stop-color="${tone}"/><stop offset="1" stop-color="#09090b"/>
+        </linearGradient></defs>
+        <rect width="800" height="800" fill="url(#g)"/>
+        <text x="400" y="390" fill="#ffffff" text-anchor="middle" font-size="66" font-family="Arial" font-weight="700">${label}</text>
+        <text x="400" y="455" fill="#8f8f99" text-anchor="middle" font-size="28" font-family="Arial">NENEI SHOP</text>
+      </svg>`);
+
+  const sampleProducts = [
+    {id:"sample1",category:"家具",name:"黑色系家具範例",price:"80 糖",image:makePlaceholder("家具","#222228")},
+    {id:"sample2",category:"作物",name:"可愛作物範例",price:"120 糖",image:makePlaceholder("作物","#24211d")},
+    {id:"sample3",category:"戒指限男",name:"男戒範例",price:"200 糖",image:makePlaceholder("戒指限男","#1d2025")},
+    {id:"sample4",category:"戒指限女",name:"女戒範例",price:"200 糖",image:makePlaceholder("戒指限女","#241d24")}
+  ];
+
+  function loadProducts(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw){
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleProducts));
+        return [...sampleProducts];
+      }
+      return JSON.parse(raw);
+    }catch(e){ return [...sampleProducts]; }
+  }
+  let products = loadProducts();
+
+  function saveProducts(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+    render();
+    toast("已儲存");
+  }
+
+  function toast(msg){
+    const t=$("#toast"); t.textContent=msg; t.classList.add("show");
+    setTimeout(()=>t.classList.remove("show"),1300);
+  }
+
+  function esc(s=""){
+    return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+  }
+
+  function render(){
+    const q=$("#searchInput").value.trim().toLowerCase();
+    let list = products.filter(p => activeCategory==="全部" || p.category===activeCategory);
+    if(q) list=list.filter(p => p.name.toLowerCase().includes(q) || p.price.toLowerCase().includes(q));
+    $("#productCount").textContent=`${list.length} 件商品`;
+    $("#sectionTitle").textContent=activeCategory==="全部"?"全部商品":activeCategory;
+    $("#grid").innerHTML="";
+    $("#empty").classList.toggle("hidden", list.length!==0);
+
+    list.forEach(p=>{
+      const card=document.createElement("article");
+      card.className="card";
+      card.innerHTML=`
+        <div class="card-media"><img src="${p.image}" alt="${esc(p.name)}"></div>
+        <div class="card-body">
+          <span class="badge">${esc(p.category)}</span>
+          <div class="card-title">${esc(p.name)}</div>
+          <div class="price">${esc(p.price)}</div>
+          ${isAdmin?`<div class="actions"><button class="btn edit">編輯</button><button class="btn danger delete">刪除</button></div>`:""}
+        </div>`;
+      if(isAdmin){
+        card.querySelector(".edit").onclick=()=>openProduct(p);
+        card.querySelector(".delete").onclick=()=>deleteProduct(p.id);
+      }
+      $("#grid").appendChild(card);
+    });
+
+    $("#addBtn").classList.toggle("hidden",!isAdmin);
+    $("#exportBtn").classList.toggle("hidden",!isAdmin);
+    $("#importLabel").classList.toggle("hidden",!isAdmin);
+    $("#adminBtn").textContent=isAdmin?"管理員選單":"管理員登入";
+  }
+
+  function openProduct(p=null){
+    $("#productDialogTitle").textContent=p?"編輯商品":"新增商品";
+    $("#productId").value=p?.id||"";
+    $("#productCategory").value=p?.category||"家具";
+    $("#productName").value=p?.name||"";
+    $("#productPrice").value=p?.price||"";
+    $("#productImage").value="";
+    editingImage=p?.image||"";
+    if(editingImage){$("#preview").src=editingImage;$("#preview").classList.remove("hidden")}
+    else{$("#preview").src="";$("#preview").classList.add("hidden")}
+    $("#productError").textContent="";
+    $("#productDialog").showModal();
+  }
+
+  function deleteProduct(id){
+    const p=products.find(x=>x.id===id);
+    if(!confirm(`確定刪除「${p?.name||"這件商品"}」？`))return;
+    products=products.filter(x=>x.id!==id);
+    saveProducts();
+  }
+
+  $("#productImage").addEventListener("change", e=>{
+    const file=e.target.files[0]; if(!file)return;
+    if(file.size>2.5*1024*1024){
+      $("#productError").textContent="圖片太大，建議 2.5MB 以下。";
+      e.target.value=""; return;
+    }
+    const reader=new FileReader();
+    reader.onload=()=>{editingImage=reader.result;$("#preview").src=editingImage;$("#preview").classList.remove("hidden")};
+    reader.readAsDataURL(file);
+  });
+
+  $("#productForm").addEventListener("submit", e=>{
+    e.preventDefault();
+    if(!editingImage){$("#productError").textContent="請選擇商品圖片";return}
+    const id=$("#productId").value;
+    const data={
+      id:id||("p_"+Date.now()+"_"+Math.random().toString(36).slice(2,7)),
+      category:$("#productCategory").value,
+      name:$("#productName").value.trim(),
+      price:$("#productPrice").value.trim(),
+      image:editingImage
+    };
+    if(id){
+      const idx=products.findIndex(p=>p.id===id); if(idx>=0)products[idx]=data;
+    }else products.unshift(data);
+    try{
+      saveProducts(); $("#productDialog").close(); $("#productForm").reset();
+    }catch(err){
+      $("#productError").textContent="儲存空間可能滿了，請匯出備份後刪掉較大的圖片。";
+    }
+  });
+
+  $("#loginForm").addEventListener("submit", e=>{
+    e.preventDefault();
+    const pass=localStorage.getItem(PASS_KEY)||"1234";
+    if($("#loginPassword").value===pass){
+      isAdmin=true; $("#loginDialog").close(); $("#loginForm").reset(); render(); toast("管理員已登入");
+    }else $("#loginError").textContent="密碼不正確";
+  });
+
+  $("#adminBtn").onclick=()=>{
+    if(!isAdmin){$("#loginError").textContent="";$("#loginDialog").showModal();return}
+    const choice=prompt("管理員選單\\n1 = 登出\\n2 = 修改密碼\\n請輸入 1 或 2");
+    if(choice==="1"){isAdmin=false;render();toast("已登出")}
+    if(choice==="2")$("#settingsDialog").showModal();
+  };
+
+  $("#settingsForm").addEventListener("submit",e=>{
+    e.preventDefault();
+    localStorage.setItem(PASS_KEY,$("#newPassword").value);
+    $("#settingsDialog").close();$("#settingsForm").reset();toast("密碼已修改");
+  });
+
+  $("#addBtn").onclick=()=>openProduct();
+  $("#searchInput").oninput=render;
+  $$(".tab").forEach(btn=>btn.onclick=()=>{
+    activeCategory=btn.dataset.category;
+    $$(".tab").forEach(x=>x.classList.toggle("active",x===btn));
+    render();
+  });
+  $$("[data-close]").forEach(btn=>btn.onclick=()=>document.getElementById(btn.dataset.close).close());
+
+  $("#exportBtn").onclick=()=>{
+    const blob=new Blob([JSON.stringify(products,null,2)],{type:"application/json"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);a.download="nenei-shop-backup.json";a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  $("#importInput").onchange=e=>{
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      try{
+        const data=JSON.parse(reader.result);
+        if(!Array.isArray(data))throw new Error();
+        if(confirm("匯入會覆蓋目前商品資料，確定嗎？")){
+          products=data;saveProducts();
+        }
+      }catch(err){alert("這不是有效的內內商店備份檔")}
+      e.target.value="";
+    };
+    reader.readAsText(file);
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>
