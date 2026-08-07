@@ -513,3 +513,113 @@ dialog select option{
   color:#382d27 !important;
 }
 </style>
+
+
+<style>
+/* 最終覆蓋：管理員登入與新增商品的字體顏色 */
+#loginDialog,
+#productDialog {
+  color:#2f2621 !important;
+}
+
+#loginDialog label,
+#productDialog label,
+#loginDialog h3,
+#productDialog h3,
+#loginDialog p,
+#productDialog p {
+  color:#2f2621 !important;
+}
+
+#loginDialog input,
+#productDialog input,
+#productDialog select {
+  background:#d8c2af !important;
+  color:#241c18 !important;
+  -webkit-text-fill-color:#241c18 !important;
+  caret-color:#241c18 !important;
+  border:1px solid #a98f7a !important;
+  opacity:1 !important;
+}
+
+#loginDialog input::placeholder,
+#productDialog input::placeholder {
+  color:#6f5e52 !important;
+  -webkit-text-fill-color:#6f5e52 !important;
+  opacity:1 !important;
+}
+
+#productDialog select option {
+  background:#f2e6dc !important;
+  color:#241c18 !important;
+}
+
+#productDialog input[type="file"] {
+  color:#241c18 !important;
+  -webkit-text-fill-color:#241c18 !important;
+}
+
+#productDialog input[type="file"]::file-selector-button {
+  background:#c2a88f !important;
+  color:#2f2621 !important;
+  border:1px solid #9f846d !important;
+  border-radius:8px;
+  padding:7px 10px;
+  margin-right:10px;
+}
+</style>
+
+
+<style>
+/* 商品卡片：縮小圖片、加強文字對比 */
+.grid{
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:14px !important;
+}
+.card{
+  border:1px solid #d7c7b8 !important;
+  background:#fffaf6 !important;
+  box-shadow:0 6px 18px rgba(92,70,55,.08) !important;
+}
+.card-media{
+  aspect-ratio:4/3 !important;
+  background:#efe5dc !important;
+  max-height:220px !important;
+}
+.card-media img{
+  width:100% !important;
+  height:100% !important;
+  object-fit:contain !important;
+  padding:8px !important;
+  background:#f8f2ec !important;
+}
+.card-body{
+  padding:12px 13px 14px !important;
+}
+.badge{
+  color:#6e5b4f !important;
+  border-color:#cdb9a7 !important;
+  background:#efe2d6 !important;
+  font-weight:700 !important;
+}
+.card-title{
+  color:#2d231e !important;
+  font-size:17px !important;
+  font-weight:800 !important;
+}
+.price{
+  color:#7d4f2d !important;
+  font-size:18px !important;
+  font-weight:900 !important;
+}
+@media(max-width:1000px){
+  .grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
+}
+@media(max-width:760px){
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+}
+@media(max-width:520px){
+  .grid{grid-template-columns:1fr !important;}
+  .card-media{max-height:260px !important;}
+}
+</style>
