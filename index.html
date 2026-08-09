@@ -1458,3 +1458,50 @@ body{
 }
 </style>
 
+
+<style>
+/* 讓管理員新增商品時，顏色／款式設定區明顯可見 */
+.variant-editor{
+  margin-top:2px;
+  padding:13px;
+  border:2px solid #b99b84 !important;
+  border-radius:12px;
+  background:#ead9cc !important;
+}
+.variant-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.variant-head strong{
+  color:#4d3b31;
+  font-size:13px;
+}
+.variant-help{
+  margin-top:3px;
+  color:#796257;
+  font-size:11px;
+}
+.variant-rows{
+  display:grid;
+  gap:8px;
+  margin-top:10px;
+}
+.variant-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 82px auto;
+  gap:7px;
+}
+.variant-row input{
+  min-width:0;
+  background:#fffaf6;
+}
+#addVariantBtn{
+  white-space:nowrap;
+  background:#9e775c !important;
+  color:white !important;
+  border-color:#9e775c !important;
+}
+</style>
+
