@@ -168,7 +168,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
     </label>
     <div class="variant-editor">
       <div class="variant-head">
-        <div><strong>顏色／款式庫存</strong><div class="variant-help">有不同顏色時再新增；一般商品不用設定。</div></div>
+        <div><strong>款式</strong><div class="variant-help">有不同顏色時再新增；一般商品不用設定。</div></div>
         <button id="addVariantBtn" class="btn" type="button">＋新增顏色</button>
       </div>
       <div id="variantRows" class="variant-rows"></div>
@@ -429,7 +429,7 @@ function renderCart(){
       <img src="${p.imageData||""}" alt="${esc(p.name)}">
       <div class="cart-item-info">
         <div class="cart-item-name">${esc(p.name)}${item.variant?` <span class="cart-variant">｜${esc(item.variant)}</span>`:""}</div>
-        <div class="cart-item-meta">${buy?"收購價：":""}${esc(p.price)} × ${item.qty}<span class="stock-note">　${buy?"需求":"庫存"} ${limit}</span></div>
+        <div class="cart-item-meta">${buy?"收購價：":""}${esc(p.price)} × ${item.qty}</div>
       </div>
       <div class="cart-line-total">${lineTotal}</div>
       <div class="cart-item-controls">
@@ -518,23 +518,11 @@ function render(){
         <div class="card-title">${esc(p.name)}</div>
         <div class="price">${isBuy?"收購價：":""}${esc(p.price)}</div>
         <div class="stock ${limit===0?"out":limit<=2?"low":""}">${statusText}</div>
-        ${variants.length?`
-          <div class="variant-stock-box">
-            <div class="variant-stock-title">${isBuy?"需求顏色／款式":"顏色／款式庫存"}</div>
-            <div class="variant-stock-list">
-              ${variants.map(v=>`
-                <div class="variant-stock-item ${v.stock===0?"variant-out":""}">
-                  <span class="variant-name-text">${esc(v.name)}</span>
-                  <strong>${v.stock===0?(isBuy?"已收齊":"已售完"):`${isBuy?"需求":"庫存"} ${v.stock}`}</strong>
-                </div>
-              `).join("")}
-            </div>
-          </div>
-        `:""}
+
 
         ${isAdmin()?`
           ${variants.length ? `
-            <div class="variant-admin-tip">此商品有顏色／款式，請按「編輯」調整各自庫存</div>
+            <div class="variant-admin-tip">此商品有款式，請按「編輯」調整各自庫存</div>
           ` : isBuy ? `
             <div class="stock-quick need-quick direct-need">
               <span>需求數量</span>
@@ -553,7 +541,7 @@ function render(){
           `}
           <div class="actions"><button class="btn edit">編輯</button><button class="btn danger delete">刪除</button></div>
         `:`
-          ${variants.length?`<div class="variant-picker"><span>${isBuy?"我有的顏色／款式":"顏色／款式"}</span><select class="variant-select">${variants.map(v=>`<option value="${esc(v.name)}" ${v.stock===0?"disabled":""}>${esc(v.name)}｜${isBuy?"需求":"庫存"} ${v.stock}</option>`).join("")}</select></div>`:""}
+          ${variants.length?`<div class="variant-picker"><span>款式</span><select class="variant-select">${variants.map(v=>`<option value="${esc(v.name)}" ${v.stock===0?"disabled":""}>${esc(v.name)}｜${isBuy?"需求":"庫存"} ${v.stock}</option>`).join("")}</select></div>`:""}
           <div class="buy-actions ${isBuy?"offer-actions":""}">
             <span class="qty-label">${isBuy?"提供數量":"數量"}</span>
             <input class="qty" type="number" min="1" max="${variants.length?variantStock(p,defaultVariant):limit}" value="${Math.max(1,selectedQty||1)}" ${limit===0?"disabled":""}>
@@ -1530,7 +1518,7 @@ body{
 
 
 <style>
-/* 商品卡：明確顯示各顏色／款式庫存 */
+/* 商品卡：明確顯示各款式 */
 .variant-stock-box{
   margin-top:10px;
   padding:9px;
@@ -1579,6 +1567,216 @@ body{
   color:#674d3d;
   font-size:10px;
   font-weight:800;
+}
+</style>
+
+
+<style>
+/* 背景與商品卡加深一點 */
+body{
+  background:
+    radial-gradient(circle at 20% -10%, rgba(201,169,141,.20), transparent 34%),
+    linear-gradient(180deg,#675951 0%,#504640 100%) !important;
+}
+.card{
+  background:#d8c2af !important;
+  border-color:#b79c86 !important;
+}
+.card-body{
+  background:#d8c2af !important;
+}
+.variant-picker select{
+  background:#efe1d5 !important;
+  border-color:#b99f8a !important;
+}
+</style>
+
+
+<style>
+/* 商品卡與背景做反差：整體背景深、商品卡淺 */
+.card,
+.card-body{
+  background:#f0e2d7 !important;
+}
+.card{
+  border-color:#c9ae98 !important;
+}
+</style>
+
+
+<style>
+/* 商品卡內部顏色顛倒：圖片區深、金額／數量區淺 */
+.card-media{
+  background:#d8c2af !important;
+}
+.card-body{
+  background:#f0e2d7 !important;
+}
+.buy-actions,
+.offer-actions{
+  background:#f0e2d7 !important;
+}
+.variant-picker select{
+  background:#fff8f2 !important;
+}
+</style>
+
+
+<style>
+/* === 商品區版面優化 === */
+
+/* 卡片整體更俐落 */
+.card{
+  overflow:hidden;
+}
+.card-media{
+  aspect-ratio:1 / 1;
+  min-height:0 !important;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px !important;
+}
+.card-media img{
+  width:100%;
+  height:100%;
+  object-fit:contain !important;
+  object-position:center;
+}
+
+/* 資訊區縮短空白、建立視覺層級 */
+.card-body{
+  padding:10px 11px 11px !important;
+}
+.card-title{
+  margin-top:5px !important;
+  line-height:1.25;
+  font-weight:900 !important;
+}
+.price{
+  margin-top:4px !important;
+  font-size:16px !important;
+  line-height:1.15;
+  font-weight:950 !important;
+  color:#70472f !important;
+}
+.stock{
+  margin-top:3px !important;
+  font-size:10px !important;
+  opacity:.82;
+}
+
+/* 款式選擇壓縮，不再佔太多高度 */
+.variant-picker{
+  margin-top:7px !important;
+  display:grid !important;
+  grid-template-columns:auto minmax(0,1fr) !important;
+  align-items:center;
+  gap:6px !important;
+}
+.variant-picker span{
+  white-space:nowrap;
+  font-size:10px !important;
+}
+.variant-picker select{
+  min-width:0;
+  height:31px;
+  padding:4px 7px !important;
+  border-radius:8px !important;
+  font-size:11px;
+}
+
+/* 數量＋加入清單排成同一列 */
+.buy-actions,
+.offer-actions{
+  margin-top:7px !important;
+  display:grid !important;
+  grid-template-columns:auto 52px minmax(0,1fr) !important;
+  align-items:center;
+  gap:6px !important;
+  padding:0 !important;
+}
+.qty-label{
+  font-size:10px !important;
+  white-space:nowrap;
+}
+.buy-actions .qty,
+.offer-actions .qty{
+  width:52px !important;
+  min-width:0 !important;
+  height:32px !important;
+  padding:4px 5px !important;
+  text-align:center;
+  border-radius:8px !important;
+}
+.add-cart{
+  min-width:0 !important;
+  height:32px !important;
+  padding:4px 8px !important;
+  border-radius:8px !important;
+  background:#8d644b !important;
+  border-color:#8d644b !important;
+  color:#fffaf6 !important;
+  font-weight:900 !important;
+}
+.add-cart:hover{
+  background:#79533e !important;
+  border-color:#79533e !important;
+}
+
+/* 分類稍微弱化，選中項目才突出 */
+.tab{
+  opacity:.72;
+}
+.tab:hover{
+  opacity:.9;
+}
+.tab.active{
+  opacity:1;
+  font-weight:900 !important;
+}
+
+/* 手機窄畫面避免橫排太擠 */
+@media(max-width:480px){
+  .buy-actions,
+  .offer-actions{
+    grid-template-columns:auto 48px minmax(86px,1fr) !important;
+    gap:5px !important;
+  }
+  .buy-actions .qty,
+  .offer-actions .qty{
+    width:48px !important;
+  }
+}
+</style>
+
+
+<style>
+/* 商品圖片再放大一點 */
+.card-media{
+  padding:4px !important;
+}
+.card-media img{
+  width:108% !important;
+  height:108% !important;
+  max-width:none !important;
+  max-height:none !important;
+  object-fit:contain !important;
+}
+</style>
+
+
+<style>
+/* 商品圖片再放大一階 */
+.card-media{
+  padding:0 !important;
+}
+.card-media img{
+  width:118% !important;
+  height:118% !important;
+  max-width:none !important;
+  max-height:none !important;
+  object-fit:contain !important;
 }
 </style>
 
