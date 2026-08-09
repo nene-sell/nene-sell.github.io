@@ -1812,3 +1812,198 @@ body{
 }
 </style>
 
+
+<style>
+/* === 手機版重新優化：桌機維持放大，手機改成精緻雙欄 === */
+@media(max-width:600px){
+  .topbar{
+    padding:10px 12px !important;
+    gap:8px !important;
+    align-items:center !important;
+  }
+
+  .brand{
+    gap:8px !important;
+    min-width:0;
+    flex:1;
+  }
+
+  .logo{
+    width:38px !important;
+    height:38px !important;
+    flex:0 0 38px;
+  }
+
+  .brand h1{
+    font-size:17px !important;
+  }
+
+  .brand small{
+    display:block;
+    font-size:10px !important;
+    line-height:1.35 !important;
+    white-space:normal;
+  }
+
+  #adminBtn{
+    flex:0 0 auto;
+    padding:8px 10px !important;
+    font-size:11px !important;
+    line-height:1.1 !important;
+    white-space:nowrap !important;
+    border-radius:10px !important;
+  }
+
+  .wrap{
+    width:calc(100% - 18px) !important;
+  }
+
+  .hero{
+    padding:26px 0 18px !important;
+  }
+
+  .hero p,
+  .eyebrow{
+    font-size:11px !important;
+  }
+
+  .toolbar{
+    margin-bottom:10px !important;
+  }
+
+  .tabs{
+    gap:6px !important;
+    padding-bottom:12px !important;
+  }
+
+  .tab{
+    padding:7px 10px !important;
+    font-size:11px !important;
+  }
+
+  .section-head{
+    margin:6px 0 12px !important;
+  }
+
+  .section-head h3{
+    font-size:20px !important;
+  }
+
+  .grid{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:10px !important;
+    padding-bottom:80px !important;
+  }
+
+  .card{
+    border-radius:14px !important;
+  }
+
+  .card-media{
+    aspect-ratio:1 / 1 !important;
+  }
+
+  .card-media img{
+    width:100% !important;
+    height:100% !important;
+    max-width:100% !important;
+    max-height:100% !important;
+    object-fit:cover !important;
+  }
+
+  .card-body{
+    padding:9px !important;
+  }
+
+  .badge{
+    font-size:9px !important;
+    padding:3px 6px !important;
+    margin-bottom:5px !important;
+  }
+
+  .card-title{
+    font-size:12px !important;
+    line-height:1.25 !important;
+    min-height:30px;
+  }
+
+  .price{
+    font-size:15px !important;
+    margin-top:4px !important;
+  }
+
+  .stock{
+    font-size:10px !important;
+    margin-top:3px !important;
+  }
+
+  .variant-picker{
+    margin-top:6px !important;
+    display:block !important;
+  }
+
+  .variant-picker span{
+    display:block;
+    margin-bottom:3px;
+    font-size:9px !important;
+  }
+
+  .variant-picker select{
+    width:100% !important;
+    height:30px !important;
+    font-size:10px !important;
+    padding:3px 6px !important;
+  }
+
+  .buy-actions,
+  .offer-actions{
+    margin-top:6px !important;
+    display:grid !important;
+    grid-template-columns:40px 1fr !important;
+    gap:5px !important;
+    align-items:center;
+  }
+
+  .qty-label{
+    display:none !important;
+  }
+
+  .buy-actions .qty,
+  .offer-actions .qty{
+    width:40px !important;
+    height:30px !important;
+    font-size:11px !important;
+    padding:2px 4px !important;
+  }
+
+  .add-cart{
+    height:30px !important;
+    font-size:10px !important;
+    padding:3px 5px !important;
+  }
+
+  .cart-fab{
+    right:10px !important;
+    bottom:12px !important;
+    padding:9px 12px !important;
+    font-size:12px !important;
+    border-radius:999px !important;
+  }
+}
+
+@media(max-width:360px){
+  .grid{
+    gap:8px !important;
+  }
+  .card-body{
+    padding:8px !important;
+  }
+  .card-title{
+    font-size:11px !important;
+  }
+  .price{
+    font-size:14px !important;
+  }
+}
+</style>
+
