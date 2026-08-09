@@ -166,6 +166,13 @@ dialog input:focus,dialog select:focus{border-color:#666}
     <label><span id="stockFieldLabel">庫存</span>
       <input id="productStock" type="number" min="0" step="1" value="1" placeholder="例如：5" required>
     </label>
+    <div class="variant-editor">
+      <div class="variant-head">
+        <div><strong>顏色／款式庫存</strong><div class="variant-help">有不同顏色時再新增；一般商品不用設定。</div></div>
+        <button id="addVariantBtn" class="btn" type="button">＋新增顏色</button>
+      </div>
+      <div id="variantRows" class="variant-rows"></div>
+    </div>
     <label>名稱
       <input id="productName" placeholder="例如：黑色鹿角裝飾" required maxlength="80">
     </label>
@@ -261,9 +268,29 @@ function esc(s=""){
 }
 
 
+function getVariants(p){
+  return Array.isArray(p?.variants)
+    ? p.variants
+        .map(v=>({
+          name:String(v?.name||"").trim(),
+          stock:Math.max(0,Math.floor(Number(v?.stock)||0))
+        }))
+        .filter(v=>v.name)
+    : [];
+}
+
 function getStock(p){
-  const n=Number(p.stock);
+  const variants=getVariants(p);
+  if(variants.length){
+    return variants.reduce((sum,v)=>sum+v.stock,0);
+  }
+  const n=Number(p?.stock);
   return Number.isFinite(n) && n>=0 ? Math.floor(n) : 1;
+}
+
+function variantStock(p,name){
+  const v=getVariants(p).find(x=>x.name===name);
+  return v ? v.stock : 0;
 }
 
 function parsePrice(price){
@@ -283,9 +310,9 @@ function currentList(){
   return cartViewMode==="buy" ? offerCart : cart;
 }
 
-function qtyFor(id, mode=isBuyCategory()?"buy":"sale"){
+function qtyFor(id, mode=isBuyCategory()?"buy":"sale", variant=""){
   const list=mode==="buy" ? offerCart : cart;
-  return list.find(x=>x.id===id)?.qty || 0;
+  return list.filter(x=>x.id===id && String(x.variant||"")===String(variant||"")).reduce((s,x)=>s+(Number(x.qty)||0),0);
 }
 
 function cartQtyFor(id){
@@ -334,26 +361,19 @@ async function setStockDirect(p, value){
   }
 }
 
-function addToList(p, qty, mode="sale"){
-  const limit=getStock(p);
+function addToList(p, qty, mode="sale", variant=""){
+  const vs=getVariants(p);
+  if(vs.length && !variant){toast("請先選擇顏色／款式");return;}
+  const limit=vs.length?variantStock(p,variant):getStock(p);
   const n=Math.max(1,Math.floor(Number(qty)||1));
-  const list=mode==="buy" ? offerCart : cart;
-  const existing=list.find(x=>x.id===p.id);
-
-  if(limit<=0){
-    toast(mode==="buy" ? "這項已收齊" : "商品已售完");
-    return;
-  }
-
-  // 商品卡上的按鈕是「設定/更新數量」，不是累加。
-  const next=Math.min(n,limit);
-  if(existing) existing.qty=next;
-  else list.push({id:p.id,qty:next});
-
+  const list=mode==="buy"?offerCart:cart;
+  const existing=list.find(x=>x.id===p.id && String(x.variant||"")===String(variant||""));
+  if(limit<=0){toast(mode==="buy"?"這個款式已收齊":"這個款式已售完");return;}
+  if(existing)existing.qty=Math.min(n,limit);
+  else list.push({id:p.id,qty:Math.min(n,limit),variant:variant||""});
   cartViewMode=mode;
-  renderCart();
-  updateCartFab();
-  toast(mode==="buy" ? "已加入出售清單" : "已加入交易清單");
+  renderCart(); updateCartFab();
+  toast(mode==="buy"?"已加入出售清單":"已加入交易清單");
 }
 
 function renderCart(){
@@ -387,7 +407,8 @@ function renderCart(){
   list.forEach(item=>{
     const p=products.find(x=>x.id===item.id);
     if(!p)return;
-    const limit=getStock(p);
+    const vs=getVariants(p);
+    const limit=vs.length?variantStock(p,item.variant||""):getStock(p);
     if(item.qty>limit)item.qty=limit;
     if(item.qty<1)return;
 
@@ -407,7 +428,7 @@ function renderCart(){
     row.innerHTML=`
       <img src="${p.imageData||""}" alt="${esc(p.name)}">
       <div class="cart-item-info">
-        <div class="cart-item-name">${esc(p.name)}</div>
+        <div class="cart-item-name">${esc(p.name)}${item.variant?` <span class="cart-variant">｜${esc(item.variant)}</span>`:""}</div>
         <div class="cart-item-meta">${buy?"收購價：":""}${esc(p.price)} × ${item.qty}<span class="stock-note">　${buy?"需求":"庫存"} ${limit}</span></div>
       </div>
       <div class="cart-line-total">${lineTotal}</div>
@@ -421,8 +442,8 @@ function renderCart(){
     row.querySelector(".minus").onclick=()=>{
       item.qty--;
       if(item.qty<=0){
-        if(buy) offerCart=offerCart.filter(x=>x.id!==item.id);
-        else cart=cart.filter(x=>x.id!==item.id);
+        if(buy) offerCart=offerCart.filter(x=>!(x.id===item.id && String(x.variant||"")===String(item.variant||"")));
+        else cart=cart.filter(x=>!(x.id===item.id && String(x.variant||"")===String(item.variant||"")));
       }
       renderCart();
       updateCartFab();
@@ -480,7 +501,9 @@ function render(){
   list.forEach(p=>{
     const isBuy=p.category==="收購區";
     const limit=getStock(p);
-    const selectedQty=isBuy ? offerQtyFor(p.id) : cartQtyFor(p.id);
+    const variants=getVariants(p);
+    const defaultVariant=variants.find(v=>v.stock>0)?.name||variants[0]?.name||"";
+    const selectedQty=qtyFor(p.id,isBuy?"buy":"sale",defaultVariant);
     const card=document.createElement("article");
     card.className=`card ${isBuy?"wanted-card":""}`;
 
@@ -495,6 +518,7 @@ function render(){
         <div class="card-title">${esc(p.name)}</div>
         <div class="price">${isBuy?"收購價：":""}${esc(p.price)}</div>
         <div class="stock ${limit===0?"out":limit<=2?"low":""}">${statusText}</div>
+        ${variants.length?`<div class="variant-stock-list">${variants.map(v=>`<span class="${v.stock===0?"variant-out":""}">${esc(v.name)}　${isBuy?"需求":"庫存"} ${v.stock}</span>`).join("")}</div>`:""}
 
         ${isAdmin()?`
           ${isBuy ? `
@@ -515,9 +539,10 @@ function render(){
           `}
           <div class="actions"><button class="btn edit">編輯</button><button class="btn danger delete">刪除</button></div>
         `:`
+          ${variants.length?`<div class="variant-picker"><span>${isBuy?"我有的顏色／款式":"顏色／款式"}</span><select class="variant-select">${variants.map(v=>`<option value="${esc(v.name)}" ${v.stock===0?"disabled":""}>${esc(v.name)}｜${isBuy?"需求":"庫存"} ${v.stock}</option>`).join("")}</select></div>`:""}
           <div class="buy-actions ${isBuy?"offer-actions":""}">
             <span class="qty-label">${isBuy?"提供數量":"數量"}</span>
-            <input class="qty" type="number" min="1" max="${limit}" value="${Math.max(1,selectedQty||1)}" ${limit===0?"disabled":""}>
+            <input class="qty" type="number" min="1" max="${variants.length?variantStock(p,defaultVariant):limit}" value="${Math.max(1,selectedQty||1)}" ${limit===0?"disabled":""}>
             <button class="btn primary add-cart" ${limit===0?"disabled":""}>${
               limit===0
                 ? (isBuy?"已收齊":"售完")
@@ -553,8 +578,16 @@ function render(){
     }else{
       const addBtn=card.querySelector(".add-cart");
       const qtyInput=card.querySelector(".qty");
+      const variantSelect=card.querySelector(".variant-select");
+      if(variantSelect){
+        variantSelect.value=defaultVariant;
+        variantSelect.onchange=()=>{
+          const lim=variantStock(p,variantSelect.value);
+          qtyInput.max=lim; qtyInput.value=1; qtyInput.disabled=lim===0; addBtn.disabled=lim===0;
+        };
+      }
       if(addBtn)addBtn.onclick=()=>{
-        addToList(p,qtyInput?.value||1,isBuy?"buy":"sale");
+        addToList(p,qtyInput?.value||1,isBuy?"buy":"sale",variantSelect?.value||"");
         render();
       };
     }
@@ -607,6 +640,15 @@ async function compressImage(file){
   return out;
 }
 
+function addVariantRow(name="",stock=0){
+  const row=document.createElement("div"); row.className="variant-row";
+  row.innerHTML=`<input class="variant-name" placeholder="例如：黑色" value="${esc(name)}"><input class="variant-stock-input" type="number" min="0" step="1" value="${Math.max(0,Math.floor(Number(stock)||0))}"><button class="btn danger variant-remove" type="button">刪除</button>`;
+  row.querySelector(".variant-remove").onclick=()=>row.remove();
+  $("#variantRows").appendChild(row);
+}
+function loadVariantRows(p){$("#variantRows").innerHTML="";getVariants(p).forEach(v=>addVariantRow(v.name,v.stock));}
+function collectVariants(){return $$(".variant-row",$("#variantRows")).map(r=>({name:r.querySelector(".variant-name").value.trim(),stock:Math.max(0,Math.floor(Number(r.querySelector(".variant-stock-input").value)||0))})).filter(v=>v.name);}
+
 function updateProductFormMode(){
   const buy=$("#productCategory").value==="收購區";
   $("#stockFieldLabel").textContent=buy ? "需求數量" : "庫存";
@@ -621,7 +663,8 @@ function openProduct(p=null){
   updateProductFormMode();
   $("#productName").value=p?.name||"";
   $("#productPrice").value=p?.price||"";
-  $("#productStock").value=Number.isFinite(Number(p?.stock))?Number(p.stock):1;
+  $("#productStock").value=getVariants(p).length?0:(Number.isFinite(Number(p?.stock))?Number(p.stock):1);
+  loadVariantRows(p);
   $("#productImage").value="";
   editingImage=p?.imageData||"";
   $("#productError").textContent="";
@@ -636,6 +679,7 @@ function openProduct(p=null){
 }
 
 $("#productCategory").addEventListener("change",updateProductFormMode);
+$("#addVariantBtn").onclick=()=>addVariantRow("",0);
 
 $("#productImage").addEventListener("change", async e=>{
   const file=e.target.files[0];
@@ -1375,6 +1419,38 @@ body{
 
 <style>
 /* 整體背景再調淺一階 */
+body{
+  background:
+    radial-gradient(circle at 20% -10%, rgba(224,199,177,.24), transparent 36%),
+    linear-gradient(180deg,#75675f 0%,#5f554f 100%) !important;
+}
+</style>
+
+
+<style>
+body{
+  background:
+    radial-gradient(circle at 20% -10%,rgba(242,224,209,.34),transparent 38%),
+    linear-gradient(180deg,#93847a 0%,#7d7069 100%) !important;
+}
+.variant-editor{padding:12px;border:1px solid #cdb9a8;border-radius:12px;background:#f5ebe3}
+.variant-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.variant-help{font-size:11px;color:#806e62;margin-top:3px}
+.variant-rows{display:grid;gap:7px;margin-top:9px}
+.variant-row{display:grid;grid-template-columns:minmax(0,1fr) 80px auto;gap:7px}
+.variant-row input{min-width:0}
+.variant-stock-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.variant-stock-list span{padding:4px 7px;border-radius:999px;background:#eadbcf;border:1px solid #d2bba8;color:#59483e;font-size:10px;font-weight:800}
+.variant-stock-list .variant-out{opacity:.55;text-decoration:line-through}
+.variant-picker{display:grid;gap:4px;margin-top:9px}
+.variant-picker span{font-size:11px;color:#756359;font-weight:800}
+.variant-picker select{width:100%;padding:8px 9px;border:1px solid #c9b3a2;border-radius:9px;background:#fffaf6;color:#45372f}
+.cart-variant{color:#9a6f51;font-weight:900}
+</style>
+
+
+<style>
+/* 背景恢復到先前版本 */
 body{
   background:
     radial-gradient(circle at 20% -10%, rgba(224,199,177,.24), transparent 36%),
