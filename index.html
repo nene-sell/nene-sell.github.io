@@ -1907,3 +1907,57 @@ body{
 }
 </style>
 
+
+<style>
+/* === 桌機響應式修正 ===
+   超寬螢幕 6 欄；一般桌機/筆電 4 欄；手機維持 2 欄。
+   避免 6 張卡被硬塞到較窄的桌機畫面。
+*/
+
+/* 只有夠寬的桌機才顯示 6 欄 */
+@media(min-width:1450px){
+  #grid.grid{
+    grid-template-columns:repeat(6,minmax(0,1fr)) !important;
+  }
+}
+
+/* 一般桌機與筆電 */
+@media(min-width:601px) and (max-width:1449px){
+  .wrap{
+    width:min(1180px,calc(100% - 36px)) !important;
+  }
+
+  #grid.grid{
+    grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+    gap:16px !important;
+  }
+
+  .card-title{
+    font-size:16px !important;
+  }
+
+  .buy-actions,
+  .offer-actions{
+    grid-template-columns:auto 56px minmax(100px,1fr) !important;
+    gap:7px !important;
+  }
+
+  .buy-actions .qty,
+  .offer-actions .qty{
+    width:56px !important;
+  }
+
+  .add-cart{
+    white-space:nowrap !important;
+    word-break:keep-all !important;
+  }
+}
+
+/* 手機仍維持前面調好的雙欄 */
+@media(max-width:600px){
+  #grid.grid{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+}
+</style>
+
