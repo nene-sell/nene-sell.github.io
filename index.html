@@ -127,6 +127,61 @@ dialog input:focus,dialog select:focus{border-color:#666}
 }
 </style>
 
+
+<style>
+/* === 商品圖 / 實體圖 大圖預覽 === */
+.card-media{cursor:zoom-in}
+.photo-lightbox{
+  width:min(920px,calc(100% - 28px));
+  max-width:920px;
+  border:0;
+  border-radius:18px;
+  padding:0;
+  background:#f3e7dc;
+  color:#3d3029;
+  box-shadow:0 24px 70px rgba(0,0,0,.42);
+}
+.photo-lightbox::backdrop{background:rgba(25,20,18,.78)}
+.photo-lightbox-inner{padding:16px}
+.photo-lightbox-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-bottom:12px;
+}
+.photo-lightbox-title{font-size:16px;font-weight:900}
+.photo-lightbox-close{
+  width:36px;height:36px;border:1px solid #c6aa94;border-radius:10px;
+  background:#e2cdbb;color:#4b392f;font-size:20px;cursor:pointer;
+}
+.photo-stage{
+  display:flex;align-items:center;justify-content:center;
+  min-height:300px;max-height:72vh;padding:12px;
+  border-radius:14px;background:#d8c2af;overflow:hidden;
+}
+.photo-stage img{
+  display:block;max-width:100%;max-height:68vh;width:auto;height:auto;
+  object-fit:contain;border-radius:10px;
+}
+.photo-tabs{display:flex;justify-content:center;gap:8px;margin-top:12px}
+.photo-tab{
+  border:1px solid #b99b84;border-radius:999px;padding:8px 16px;
+  background:#ead9cc;color:#59463b;font-weight:900;cursor:pointer;
+}
+.photo-tab.active{background:#8e684f;color:#fff;border-color:#8e684f}
+.real-photo-field{display:grid;gap:7px}
+.real-photo-preview{
+  width:110px;height:110px;object-fit:contain;border-radius:10px;
+  border:1px solid #cbb19d;background:#ead8ca;
+}
+.real-photo-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+@media(max-width:600px){
+  .photo-lightbox{width:calc(100% - 18px)}
+  .photo-lightbox-inner{padding:10px}
+  .photo-stage{min-height:220px;padding:8px}
+  .photo-stage img{max-height:66vh}
+  .photo-tab{padding:7px 13px;font-size:11px}
+}
+</style>
+
 </head>
 <body>
 <header class="topbar">
@@ -207,6 +262,17 @@ dialog input:focus,dialog select:focus{border-color:#666}
         <button id="addVariantBtn" class="btn" type="button">＋新增顏色</button>
       </div>
       <div id="variantRows" class="variant-rows"></div>
+
+<div class="field real-photo-field">
+  <label>實體圖（選填）</label>
+  <input id="productRealImage" type="file" accept="image/*">
+  <div class="real-photo-actions">
+    <img id="realPreview" class="real-photo-preview hidden" alt="實體圖預覽">
+    <button id="removeRealImageBtn" class="btn hidden" type="button">移除實體圖</button>
+  </div>
+  <div class="hint">有上傳實體圖時，買家點商品圖可切換「商品圖 / 實體圖」。</div>
+</div>
+
     </div>
     <label>名稱
       <input id="productName" placeholder="例如：黑色鹿角裝飾" required maxlength="80">
@@ -279,6 +345,7 @@ let products = [];
 let activeCategory = "新家具";
 let currentUser = null;
 let editingImage = "";
+let editingRealImage = "";
 let cart = [];
 let offerCart = [];
 let cartViewMode = "sale";
@@ -519,6 +586,38 @@ function renderCart(){
   updateCartFab();
 }
 
+
+let lightboxProduct=null;
+
+function showProductPhoto(kind="product"){
+  if(!lightboxProduct)return;
+  const productImg=lightboxProduct.imageData||"";
+  const realImg=lightboxProduct.realImageData||"";
+  const useReal=kind==="real" && realImg;
+  $("#photoLightboxImage").src=useReal ? realImg : productImg;
+  $("#photoLightboxTitle").textContent=lightboxProduct.name||"商品圖片";
+  $$("#photoTabs .photo-tab").forEach(btn=>{
+    btn.classList.toggle("active",btn.dataset.photoKind===(useReal?"real":"product"));
+  });
+}
+
+function openPhotoLightbox(p){
+  if(!p?.imageData)return;
+  lightboxProduct=p;
+  const realBtn=$("#photoTabs .photo-tab[data-photo-kind='real']");
+  realBtn.classList.toggle("hidden",!p.realImageData);
+  showProductPhoto("product");
+  $("#photoLightbox").showModal();
+}
+
+$("#photoLightboxClose").onclick=()=>$("#photoLightbox").close();
+$("#photoLightbox").addEventListener("click",e=>{
+  if(e.target===$("#photoLightbox"))$("#photoLightbox").close();
+});
+$$("#photoTabs .photo-tab").forEach(btn=>{
+  btn.onclick=()=>showProductPhoto(btn.dataset.photoKind);
+});
+
 function render(){
   const q=$("#searchInput").value.trim().toLowerCase();
   const buyMode=isBuyCategory();
@@ -593,6 +692,12 @@ function render(){
           </div>
         `}
       </div>`;
+
+    const cardMedia=card.querySelector(".card-media");
+    if(cardMedia && p.imageData){
+      cardMedia.title=p.realImageData ? "點擊查看商品圖 / 實體圖" : "點擊查看大圖";
+      cardMedia.onclick=()=>openPhotoLightbox(p);
+    }
 
     if(isAdmin()){
       card.querySelector(".edit").onclick=()=>openProduct(p);
@@ -711,6 +816,17 @@ function openProduct(p=null){
   loadVariantRows(p);
   $("#productImage").value="";
   editingImage=p?.imageData||"";
+  editingRealImage=p?.realImageData||"";
+  $("#productRealImage").value="";
+  if(editingRealImage){
+    $("#realPreview").src=editingRealImage;
+    $("#realPreview").classList.remove("hidden");
+    $("#removeRealImageBtn").classList.remove("hidden");
+  }else{
+    $("#realPreview").src="";
+    $("#realPreview").classList.add("hidden");
+    $("#removeRealImageBtn").classList.add("hidden");
+  }
   $("#productError").textContent="";
   if(editingImage){
     $("#preview").src=editingImage;
@@ -741,6 +857,33 @@ $("#productImage").addEventListener("change", async e=>{
   }
 });
 
+
+$("#productRealImage").addEventListener("change", async e=>{
+  const file=e.target.files[0];
+  if(!file)return;
+  $("#productError").textContent="實體圖處理中…";
+  try{
+    editingRealImage=await compressImage(file);
+    $("#realPreview").src=editingRealImage;
+    $("#realPreview").classList.remove("hidden");
+    $("#removeRealImageBtn").classList.remove("hidden");
+    $("#productError").textContent="";
+  }catch(err){
+    editingRealImage="";
+    $("#realPreview").classList.add("hidden");
+    $("#removeRealImageBtn").classList.add("hidden");
+    $("#productError").textContent=err.message||"實體圖處理失敗";
+  }
+});
+
+$("#removeRealImageBtn").onclick=()=>{
+  editingRealImage="";
+  $("#productRealImage").value="";
+  $("#realPreview").src="";
+  $("#realPreview").classList.add("hidden");
+  $("#removeRealImageBtn").classList.add("hidden");
+};
+
 $("#productForm").addEventListener("submit", async e=>{
   e.preventDefault();
   if(!isAdmin()){
@@ -769,6 +912,7 @@ $("#productForm").addEventListener("submit", async e=>{
         : Math.max(0,Math.floor(Number($("#productStock").value)||0)),
       variants,
       imageData:editingImage,
+      realImageData:editingRealImage,
       updatedAt:serverTimestamp()
     };
 
@@ -922,6 +1066,23 @@ onSnapshot(
   }
 );
 </script>
+
+<dialog id="photoLightbox" class="photo-lightbox">
+  <div class="photo-lightbox-inner">
+    <div class="photo-lightbox-head">
+      <div id="photoLightboxTitle" class="photo-lightbox-title">商品圖片</div>
+      <button id="photoLightboxClose" class="photo-lightbox-close" type="button" aria-label="關閉">×</button>
+    </div>
+    <div class="photo-stage">
+      <img id="photoLightboxImage" alt="商品大圖">
+    </div>
+    <div id="photoTabs" class="photo-tabs">
+      
+      <button class="photo-tab active" data-photo-kind="real" type="button">實體圖</button>
+    </div>
+  </div>
+</dialog>
+
 </body>
 </html>
 
