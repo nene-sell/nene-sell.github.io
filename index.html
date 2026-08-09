@@ -504,11 +504,13 @@ function render(){
               <button class="need-save" type="button">儲存</button>
             </div>
           ` : `
-            <div class="stock-quick">
+            <div class="stock-quick arrow-stock">
               <span>快速庫存</span>
-              <button class="stock-minus" type="button" ${limit===0?"disabled":""}>－1</button>
               <strong>${limit}</strong>
-              <button class="stock-plus" type="button">＋1</button>
+              <div class="stock-arrows">
+                <button class="stock-plus" type="button" aria-label="庫存加一">▲</button>
+                <button class="stock-minus" type="button" aria-label="庫存減一" ${limit===0?"disabled":""}>▼</button>
+              </div>
             </div>
           `}
           <div class="actions"><button class="btn edit">編輯</button><button class="btn danger delete">刪除</button></div>
@@ -1340,6 +1342,33 @@ body{
   background:#b68e70 !important;
   color:#fffaf6 !important;
   border-color:#9f7a60 !important;
+}
+</style>
+
+
+<style>
+/* 快速庫存改為上下箭頭 */
+.arrow-stock{
+  grid-template-columns:1fr auto auto !important;
+}
+.stock-arrows{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.stock-arrows button{
+  min-width:28px !important;
+  width:28px;
+  height:18px !important;
+  line-height:14px;
+  padding:0 !important;
+  font-size:10px;
+  border-radius:5px !important;
+}
+.arrow-stock > strong{
+  min-width:28px;
+  text-align:center;
+  font-size:14px;
 }
 </style>
 
