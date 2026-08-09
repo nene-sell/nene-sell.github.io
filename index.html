@@ -1750,3 +1750,65 @@ body{
 }
 </style>
 
+
+<style>
+/* 桌機版減少左右留白，商品卡整體等比例放大 */
+.wrap{
+  width:min(1420px,calc(100% - 48px)) !important;
+}
+
+.grid{
+  grid-template-columns:repeat(6,minmax(0,1fr)) !important;
+  gap:18px !important;
+}
+
+.card{
+  width:100% !important;
+  border-radius:20px !important;
+}
+
+.card-media{
+  aspect-ratio:1/1 !important;
+}
+
+.card-body{
+  padding:16px !important;
+}
+
+.card-title{
+  font-size:18px !important;
+}
+
+.price{
+  font-size:20px !important;
+}
+
+.badge{
+  font-size:12px !important;
+}
+
+.stock{
+  font-size:12px !important;
+}
+
+.variant-picker select,
+.buy-actions .qty,
+.offer-actions .qty,
+.add-cart{
+  min-height:38px !important;
+}
+
+/* 螢幕縮小時自動降欄，不硬擠 */
+@media(max-width:1200px){
+  .wrap{width:min(1040px,calc(100% - 36px)) !important;}
+  .grid{grid-template-columns:repeat(4,minmax(0,1fr)) !important;}
+}
+@media(max-width:820px){
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+}
+@media(max-width:520px){
+  .wrap{width:calc(100% - 24px) !important;}
+  .grid{grid-template-columns:1fr !important;}
+}
+</style>
+
