@@ -518,10 +518,24 @@ function render(){
         <div class="card-title">${esc(p.name)}</div>
         <div class="price">${isBuy?"收購價：":""}${esc(p.price)}</div>
         <div class="stock ${limit===0?"out":limit<=2?"low":""}">${statusText}</div>
-        ${variants.length?`<div class="variant-stock-list">${variants.map(v=>`<span class="${v.stock===0?"variant-out":""}">${esc(v.name)}　${isBuy?"需求":"庫存"} ${v.stock}</span>`).join("")}</div>`:""}
+        ${variants.length?`
+          <div class="variant-stock-box">
+            <div class="variant-stock-title">${isBuy?"需求顏色／款式":"顏色／款式庫存"}</div>
+            <div class="variant-stock-list">
+              ${variants.map(v=>`
+                <div class="variant-stock-item ${v.stock===0?"variant-out":""}">
+                  <span class="variant-name-text">${esc(v.name)}</span>
+                  <strong>${v.stock===0?(isBuy?"已收齊":"已售完"):`${isBuy?"需求":"庫存"} ${v.stock}`}</strong>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `:""}
 
         ${isAdmin()?`
-          ${isBuy ? `
+          ${variants.length ? `
+            <div class="variant-admin-tip">此商品有顏色／款式，請按「編輯」調整各自庫存</div>
+          ` : isBuy ? `
             <div class="stock-quick need-quick direct-need">
               <span>需求數量</span>
               <input class="need-input" type="number" min="0" step="1" value="${limit}">
@@ -558,22 +572,26 @@ function render(){
       card.querySelector(".edit").onclick=()=>openProduct(p);
       card.querySelector(".delete").onclick=()=>deleteProduct(p);
 
-      if(isBuy){
-        const needInput=card.querySelector(".need-input");
-        const needSave=card.querySelector(".need-save");
-        if(needSave) needSave.onclick=()=>setStockDirect(p,needInput.value);
-        if(needInput){
-          needInput.onkeydown=e=>{
-            if(e.key==="Enter"){
-              e.preventDefault();
-              setStockDirect(p,needInput.value);
-            }
-          };
-          needInput.onchange=()=>setStockDirect(p,needInput.value);
+      if(!variants.length){
+        if(isBuy){
+          const needInput=card.querySelector(".need-input");
+          const needSave=card.querySelector(".need-save");
+          if(needSave) needSave.onclick=()=>setStockDirect(p,needInput.value);
+          if(needInput){
+            needInput.onkeydown=e=>{
+              if(e.key==="Enter"){
+                e.preventDefault();
+                setStockDirect(p,needInput.value);
+              }
+            };
+            needInput.onchange=()=>setStockDirect(p,needInput.value);
+          }
+        }else{
+          const minus=card.querySelector(".stock-minus");
+          const plus=card.querySelector(".stock-plus");
+          if(minus) minus.onclick=()=>changeStock(p,-1);
+          if(plus) plus.onclick=()=>changeStock(p,1);
         }
-      }else{
-        card.querySelector(".stock-minus").onclick=()=>changeStock(p,-1);
-        card.querySelector(".stock-plus").onclick=()=>changeStock(p,1);
       }
     }else{
       const addBtn=card.querySelector(".add-cart");
@@ -1507,6 +1525,60 @@ body{
   background:#9e775c !important;
   color:white !important;
   border-color:#9e775c !important;
+}
+</style>
+
+
+<style>
+/* 商品卡：明確顯示各顏色／款式庫存 */
+.variant-stock-box{
+  margin-top:10px;
+  padding:9px;
+  border:1px solid #c9ae98;
+  border-radius:10px;
+  background:#f0e2d7;
+}
+.variant-stock-title{
+  margin-bottom:6px;
+  color:#6a5142;
+  font-size:11px;
+  font-weight:900;
+}
+.variant-stock-list{
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:5px !important;
+  margin:0 !important;
+}
+.variant-stock-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  padding:5px 7px;
+  border-radius:7px;
+  background:#fff8f2;
+  color:#49372e;
+  font-size:11px;
+}
+.variant-stock-item strong{
+  color:#7d4f2d;
+  font-size:11px;
+}
+.variant-stock-item.variant-out{
+  opacity:.58;
+}
+.variant-name-text{
+  font-weight:800;
+}
+.variant-admin-tip{
+  margin-top:9px;
+  padding:7px 8px;
+  border-radius:9px;
+  background:#e3d0c1;
+  color:#674d3d;
+  font-size:10px;
+  font-weight:800;
 }
 </style>
 
