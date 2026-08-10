@@ -2689,3 +2689,46 @@ main.wrap{
 }
 </style>
 
+
+<style>
+/* === 商品卡內容對齊 ===
+   有款式的商品會多一列選單；讓所有商品的數量／加入清單固定貼齊卡片底部，
+   不再因為有沒有款式而上下錯落。 */
+.card{
+  display:flex !important;
+  flex-direction:column !important;
+}
+
+.card-body{
+  flex:1 !important;
+  display:flex !important;
+  flex-direction:column !important;
+}
+
+/* 一般買家操作列固定在商品卡底部 */
+.buy-actions,
+.offer-actions{
+  margin-top:auto !important;
+}
+
+/* 有款式時，選單維持在操作列上方 */
+.variant-picker{
+  margin-bottom:8px !important;
+}
+
+/* 商品名稱最多常見兩行時也讓價格起點更整齊 */
+.card-title{
+  min-height:2.5em;
+}
+
+/* 手機版字較小，兩行高度跟著縮 */
+@media(max-width:600px){
+  .card-title{
+    min-height:2.5em;
+  }
+  .variant-picker{
+    margin-bottom:6px !important;
+  }
+}
+</style>
+
