@@ -501,7 +501,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
   </div>
 </div>
 
-  <button id="adminBtn" class="btn">管理員登入</button>
+  <button id="adminBtn" class="btn" title="管理員登入" aria-label="管理員登入">⚙️</button>
 </header>
 
 <main class="wrap">
@@ -547,9 +547,9 @@ dialog input:focus,dialog select:focus{border-color:#666}
   <form id="loginForm">
     <button type="button" class="close" data-close="loginDialog">×</button>
     <h3>管理員登入</h3>
-    <p>請使用你剛才在 Firebase Authentication 建立的管理員帳號。</p>
-    <label>Email<input id="loginEmail" type="email" autocomplete="username" required></label>
-    <label>密碼<input id="loginPassword" type="password" autocomplete="current-password" required></label>
+    
+    <input id="loginEmail" type="email" autocomplete="username" required>
+    <input id="loginPassword" type="password" autocomplete="current-password" required>
     <div id="loginError" class="error"></div>
     <button class="btn primary full" type="submit">登入</button>
   </form>
@@ -2785,6 +2785,73 @@ main.wrap{
 }
 .variant-placeholder span{
   opacity:.65;
+}
+</style>
+
+<style>
+#adminBtn{
+  width:40px;height:40px;padding:0 !important;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:17px !important;line-height:1;
+}
+@media(max-width:560px){
+  #adminBtn{width:36px;height:36px;padding:0 !important;font-size:16px !important}
+}
+</style>
+
+<style>
+/* === 超小管理入口：不論登入狀態都只顯示齒輪 === */
+#adminBtn{
+  width:32px !important;
+  min-width:32px !important;
+  max-width:32px !important;
+  height:32px !important;
+  min-height:32px !important;
+  padding:0 !important;
+  overflow:hidden !important;
+  white-space:nowrap !important;
+  text-indent:-9999px !important;
+  position:relative !important;
+  border-radius:10px !important;
+}
+#adminBtn::after{
+  content:"⚙";
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-indent:0;
+  font-size:15px;
+  line-height:1;
+}
+@media(max-width:560px){
+  #adminBtn{
+    width:30px !important;
+    min-width:30px !important;
+    max-width:30px !important;
+    height:30px !important;
+    min-height:30px !important;
+  }
+  #adminBtn::after{font-size:14px}
+}
+</style>
+
+<style>
+/* 登入欄位提示字淡一點 */
+#loginEmail::placeholder,
+#loginPassword::placeholder{
+  color:#9f9188 !important;
+  opacity:.55 !important;
+}
+</style>
+
+<style>
+/* 登入欄位提示字極淡：自己仍可辨認，訪客不容易注意 */
+#loginEmail::placeholder,
+#loginPassword::placeholder{
+  color:#b9ada5 !important;
+  opacity:.22 !important;
 }
 </style>
 
