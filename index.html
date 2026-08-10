@@ -587,7 +587,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
         <label class="new-switch-row" for="productIsNew">
           <input id="productIsNew" type="checkbox">
           <span class="new-switch-box"></span>
-          <span><b>NEW</b>　標記為新品</span>
+          <span><b>新品</b>　標記為新品</span>
         </label>
       </div>
 
@@ -1007,7 +1007,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
     card.innerHTML=`
       <div class="card-media"><img src="${p.imageData || ""}" alt="${esc(p.name)}"></div>
       <div class="card-body">
-        <span class="badge">${esc(p.category)}</span>${p.isNew?`<span class="new-badge">NEW</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}
+        <span class="badge">${esc(p.category)}</span>${p.isNew?`<span class="new-badge">新品</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}
         <div class="card-title">${esc(p.name)}</div>
         <div class="price">${isBuy?"收購價：":""}${esc(p.price)}</div>
         <div class="stock ${limit===0?"out":limit<=2?"low":""}">${statusText}</div>
@@ -2665,6 +2665,38 @@ nav{
 main.wrap{
   position:relative;
   z-index:1;
+}
+</style>
+
+
+<style>
+/* NEW 標籤：小幅度、輕微跳動 */
+@keyframes newBadgeBounce{
+  0%,100%{transform:translateY(0) scale(1);}
+  40%{transform:translateY(-2px) scale(1.03);}
+  60%{transform:translateY(-1px) scale(1.01);}
+}
+.new-badge{
+  animation:newBadgeBounce 1.6s ease-in-out infinite;
+  transform-origin:center;
+  will-change:transform;
+}
+
+/* 使用者系統若設定減少動態，就自動停止動畫 */
+@media (prefers-reduced-motion: reduce){
+  .new-badge{animation:none !important;}
+}
+</style>
+
+
+<style>
+/* 新品標籤：稍微放大＋紅色 */
+.new-badge{
+  padding:5px 10px !important;
+  font-size:11px !important;
+  background:#c9574f !important;
+  color:#fffaf6 !important;
+  box-shadow:0 2px 7px rgba(150,55,48,.22) !important;
 }
 </style>
 
