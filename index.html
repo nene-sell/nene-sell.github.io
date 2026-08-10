@@ -304,6 +304,46 @@ dialog input:focus,dialog select:focus{border-color:#666}
 }
 </style>
 
+<style>
+.status-field select{width:100%;padding:10px 11px;border:1px solid #c9b3a2;border-radius:9px;background:#fffaf6;color:#45372f}
+.reserved-card{opacity:.84}
+.reserved-badge{display:inline-flex;margin-left:5px;padding:4px 8px;border-radius:999px;background:#9b7156;color:#fff;font-size:10px;font-weight:900}
+.reserved-card .stock{color:#8b624b!important;font-weight:900}
+.add-cart.reserved-disabled{background:#b8a79a!important;border-color:#a89587!important;color:#f8eee8!important;cursor:not-allowed!important;opacity:.82}
+</style>
+
+
+<style>
+/* === NEW 商品標記 === */
+.new-flag-label{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:900;
+  color:#59463b;
+  cursor:pointer;
+}
+.new-flag-label input{
+  width:17px;
+  height:17px;
+  accent-color:#9b7156;
+}
+.new-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-left:5px;
+  padding:4px 8px;
+  border-radius:999px;
+  background:#b17a57;
+  color:#fffaf6;
+  font-size:9px;
+  font-weight:1000;
+  letter-spacing:.08em;
+  box-shadow:0 2px 6px rgba(79,52,38,.16);
+}
+</style>
+
 </head>
 <body>
 <header class="topbar">
@@ -328,7 +368,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
 </section>
 
   <nav class="tabs">
-    <button class="tab active" data-category="新家具">新家具</button><button class="tab" data-category="家具">家具</button><button class="tab" data-category="花盆">花盆</button><div class="category-dropdown">
+    <button class="tab active" data-category="家具">家具</button><button class="tab" data-category="期限家具">期限家具</button><button class="tab" data-category="花盆">花盆</button><div class="category-dropdown">
       <button class="tab group-tab" data-group="戒指" type="button">戒指 <span class="drop-arrow">▾</span></button>
       <div class="category-menu">
         <button type="button" data-category="戒指限男">限男</button>
@@ -373,8 +413,8 @@ dialog input:focus,dialog select:focus{border-color:#666}
     <div class="row">
       <label>分類
         <select id="productCategory" required>
-          <option value="新家具">新家具</option>
-          <option value="家具">家具</option>
+                    <option value="家具">家具</option>
+          <option value="期限家具">期限家具</option>
           <option value="花盆">花盆</option>
           <optgroup label="戒指">
             <option value="戒指限男">限男</option>
@@ -481,7 +521,7 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
 let products = [];
-let activeCategory = "新家具";
+let activeCategory = "家具";
 let activeGroup = "";
 let currentUser = null;
 let editingImage = "";
@@ -805,21 +845,22 @@ $("#productCount").textContent=`${list.length} 件商品`;
 
   list.forEach(p=>{
     const isBuy=p.category==="收購區";
+    const reserved=!isBuy && p.status==="reserved";
     const limit=getStock(p);
     const variants=getVariants(p);
     const defaultVariant=variants.find(v=>v.stock>0)?.name||variants[0]?.name||"";
     const selectedQty=qtyFor(p.id,isBuy?"buy":"sale",defaultVariant);
     const card=document.createElement("article");
-    card.className=`card ${isBuy?"wanted-card":""}`;
+    card.className=`card ${isBuy?"wanted-card":""}${reserved?" reserved-card":""}`;
 
     const statusText=isBuy
       ? (limit===0 ? "已收齊" : limit<=2 ? `還缺 ${limit}` : `需求 ${limit}`)
-      : (limit===0 ? "已售完" : limit<=2 ? `僅剩 ${limit}` : `庫存 ${limit}`);
+      : (reserved ? "已預訂" : limit===0 ? "已售完" : limit<=2 ? `僅剩 ${limit}` : `庫存 ${limit}`);
 
     card.innerHTML=`
       <div class="card-media"><img src="${p.imageData || ""}" alt="${esc(p.name)}"></div>
       <div class="card-body">
-        <span class="badge">${esc(p.category)}</span>
+        <span class="badge">${esc(p.category)}</span>${p.isNew?`<span class="new-badge">NEW</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}
         <div class="card-title">${esc(p.name)}</div>
         <div class="price">${isBuy?"收購價：":""}${esc(p.price)}</div>
         <div class="stock ${limit===0?"out":limit<=2?"low":""}">${statusText}</div>
@@ -849,9 +890,11 @@ $("#productCount").textContent=`${list.length} 件商品`;
           ${variants.length?`<div class="variant-picker"><span>款式</span><select class="variant-select">${variants.map(v=>`<option value="${esc(v.name)}" ${v.stock===0?"disabled":""}>${esc(v.name)}｜${isBuy?"需求":"庫存"} ${v.stock}</option>`).join("")}</select></div>`:""}
           <div class="buy-actions ${isBuy?"offer-actions":""}">
             <span class="qty-label">${isBuy?"提供數量":"數量"}</span>
-            <input class="qty" type="number" min="1" max="${variants.length?variantStock(p,defaultVariant):limit}" value="${Math.max(1,selectedQty||1)}" ${limit===0?"disabled":""}>
-            <button class="btn primary add-cart" ${limit===0?"disabled":""}>${
-              limit===0
+            <input class="qty" type="number" min="1" max="${variants.length?variantStock(p,defaultVariant):limit}" value="${Math.max(1,selectedQty||1)}" ${(limit===0||reserved)?"disabled":""}>
+            <button class="btn primary add-cart ${reserved?"reserved-disabled":""}" ${(limit===0||reserved)?"disabled":""}>${
+              reserved
+                ? "已預訂"
+                : limit===0
                 ? (isBuy?"已收齊":"售完")
                 : selectedQty>0
                   ? (isBuy?"更新出售清單":"更新清單")
@@ -904,6 +947,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
         };
       }
       if(addBtn)addBtn.onclick=()=>{
+        if(reserved){toast("此商品已預訂");return;}
         addToList(p,qtyInput?.value||1,isBuy?"buy":"sale",variantSelect?.value||"");
         render();
       };
@@ -981,6 +1025,8 @@ function openProduct(p=null){
   $("#productName").value=p?.name||"";
   $("#productPrice").value=p?.price||"";
   $("#productStock").value=getVariants(p).length?0:(Number.isFinite(Number(p?.stock))?Number(p.stock):1);
+  $("#productIsNew").checked=!!p?.isNew;
+  $("#productStatus").value=p?.status||"selling";
   loadVariantRows(p);
   $("#productImage").value="";
   editingImage=p?.imageData||"";
@@ -1075,6 +1121,8 @@ $("#productForm").addEventListener("submit", async e=>{
       category:$("#productCategory").value,
       name:$("#productName").value.trim(),
       price:$("#productPrice").value.trim(),
+      status:$("#productStatus").value||"selling",
+      isNew:$("#productIsNew").checked,
       stock:variants.length
         ? variants.reduce((sum,v)=>sum+v.stock,0)
         : Math.max(0,Math.floor(Number($("#productStock").value)||0)),
@@ -2431,3 +2479,20 @@ nav{
 }
 </style>
 
+<div class="field new-flag-field">
+  <label class="new-flag-label">
+    <input id="productIsNew" type="checkbox">
+    <span>標記為 NEW</span>
+  </label>
+  <div class="hint">勾選後，商品卡會顯示 NEW 標籤。</div>
+</div>
+
+<div class="field status-field">
+          <label>販售狀態</label>
+          <select id="productStatus">
+            <option value="selling">販售中</option>
+            <option value="reserved">已預訂</option>
+          </select>
+          <div class="hint">已預訂會保留庫存，但買家不能加入清單。</div>
+        </div>
+        
