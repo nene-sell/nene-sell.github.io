@@ -1028,7 +1028,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
 
     const statusText=isBuy
       ? (limit===0 ? "已收齊" : limit<=2 ? `還缺 ${limit}` : `需求 ${limit}`)
-      : (sold ? "售完" : reserved ? "已預訂" : limit===0 ? "已售完" : limit<=2 ? `僅剩 ${limit}` : `庫存 ${limit}`);
+      : (sold ? "售完" : reserved ? "已預訂" : limit===0 ? "已售完" : `庫存 ${limit}`);
 
     card.innerHTML=`
       <div class="card-media"><img src="${p.imageData || ""}" alt="${esc(p.name)}"></div>
@@ -2750,6 +2750,23 @@ main.wrap{
     font-size:9px !important;
     margin-bottom:5px !important;
   }
+}
+</style>
+
+
+<style>
+/* === 所有販售商品的庫存文字統一使用原本低庫存提醒色 === */
+.card:not(.wanted-card) .stock{
+  color:#c97963 !important;
+  font-weight:900 !important;
+}
+
+/* 狀態文字仍維持各自原本設定 */
+.card.reserved-card .stock{
+  color:#8b624b !important;
+}
+.card.sold-card .stock{
+  color:#715e54 !important;
 }
 </style>
 
