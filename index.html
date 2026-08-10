@@ -185,7 +185,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
 
 <style>
 /* === 實用功能：只看有貨 / 排序 / 複製清單 === */
-.cart-actions{grid-template-columns:1fr 1fr 1fr !important}
+.cart-actions{grid-template-columns:1fr 1fr !important}
 @media(max-width:600px){
   .toolbar{gap:7px !important}
 .cart-actions{grid-template-columns:1fr !important}
@@ -434,7 +434,6 @@ dialog input:focus,dialog select:focus{border-color:#666}
     <div id="cartSummary" class="cart-summary hidden"></div>
     <div class="cart-actions">
       <button id="screenshotBtn" class="btn primary" type="button">確認無誤，前往截圖</button>
-      <button id="copyCartBtn" class="btn" type="button">複製清單</button>
       <button id="clearCartBtn" class="btn" type="button">清空清單</button>
     </div>
   </form>
@@ -1275,57 +1274,6 @@ onSnapshot(
 );
 
 
-async function copyCurrentCart(){
-  const buy=cartViewMode==="buy";
-  const list=buy ? offerCart : cart;
-  if(!list.length){
-    toast(buy?"出售清單是空的":"交易清單是空的");
-    return;
-  }
-
-  const lines=[];
-  let totalCount=0;
-  const totals={};
-
-  list.forEach(item=>{
-    const p=products.find(x=>x.id===item.id);
-    if(!p || item.qty<1)return;
-    totalCount+=item.qty;
-    const parsed=parsePrice(p.price);
-    const variant=item.variant ? `｜${item.variant}` : "";
-    lines.push(`${p.name}${variant} ×${item.qty}　${p.price}`);
-
-    if(parsed.amount!==null){
-      const unit=parsed.unit||"金額";
-      totals[unit]=(totals[unit]||0)+(parsed.amount*item.qty);
-    }
-  });
-
-  const sumText=Object.entries(totals)
-    .map(([unit,v])=>`${unit} ${Number.isInteger(v)?v:v.toFixed(2)}`)
-    .join("、");
-
-  const title=buy?"出售清單":"交易清單";
-  const footer=buy
-    ? `共提供 ${totalCount} 件${sumText?`｜預計可得 ${sumText}`:""}`
-    : `共 ${totalCount} 件${sumText?`｜總計 ${sumText}`:""}`;
-
-  const content=[title,...lines,footer].join("\\n");
-
-  try{
-    await navigator.clipboard.writeText(content);
-    toast("清單已複製");
-  }catch{
-    const ta=document.createElement("textarea");
-    ta.value=content;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand("copy");
-    ta.remove();
-    toast("清單已複製");
-  }
-}
-$("#copyCartBtn")?.addEventListener("click",copyCurrentCart);
 
 </script>
 
