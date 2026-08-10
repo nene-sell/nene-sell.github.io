@@ -615,6 +615,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
           <option value="reserved">已預訂</option>
           <option value="sold">售完</option>
         </select>
+        <div class="hint">庫存為 0 時會自動顯示「售完」；已預訂狀態優先。</div>
       </div>
     </div>
 
@@ -1011,7 +1012,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
   list.forEach(p=>{
     const isBuy=p.category==="收購區";
     const reserved=!isBuy && p.status==="reserved";
-    const sold=!isBuy && p.status==="sold";
+    const sold=!isBuy && !reserved && (p.status==="sold" || getStock(p)<=0);
     const limit=getStock(p);
     const variants=getVariants(p);
     const defaultVariant=variants.find(v=>v.stock>0)?.name||variants[0]?.name||"";
