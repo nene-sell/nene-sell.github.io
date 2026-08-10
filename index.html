@@ -469,6 +469,23 @@ dialog input:focus,dialog select:focus{border-color:#666}
 }
 </style>
 
+
+<style>
+/* 完售狀態 */
+.sold-card{opacity:.72}
+.sold-badge{
+  display:inline-flex;
+  margin-left:5px;
+  padding:5px 9px;
+  border-radius:999px;
+  background:#66534a;
+  color:#fffaf6;
+  font-size:10px;
+  font-weight:900;
+}
+.sold-card .stock{color:#715e54!important;font-weight:900}
+</style>
+
 </head>
 <body>
 <header class="topbar">
@@ -576,7 +593,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
     <img id="realPreview" class="real-photo-preview hidden" alt="實體圖預覽">
     <button id="removeRealImageBtn" class="btn hidden" type="button">移除實體圖</button>
   </div>
-  <div class="hint">有上傳實體圖時，買家點商品圖可切換「商品圖 / 實體圖」。</div>
+  <div class="hint">有上傳實體圖時，買家點商品圖會直接開啟實體圖，仍可切換查看商品圖。</div>
 </div>
 
     </div>
@@ -596,6 +613,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
         <select id="productStatus">
           <option value="selling">販售中</option>
           <option value="reserved">已預訂</option>
+          <option value="sold">售完</option>
         </select>
       </div>
     </div>
@@ -953,7 +971,7 @@ function openPhotoLightbox(p){
   lightboxProduct=p;
   const realBtn=$("#photoTabs .photo-tab[data-photo-kind='real']");
   realBtn.classList.toggle("hidden",!p.realImageData);
-  showProductPhoto("product");
+  showProductPhoto(p.realImageData ? "real" : "product");
   $("#photoLightbox").showModal();
 }
 
@@ -993,21 +1011,22 @@ $("#productCount").textContent=`${list.length} 件商品`;
   list.forEach(p=>{
     const isBuy=p.category==="收購區";
     const reserved=!isBuy && p.status==="reserved";
+    const sold=!isBuy && p.status==="sold";
     const limit=getStock(p);
     const variants=getVariants(p);
     const defaultVariant=variants.find(v=>v.stock>0)?.name||variants[0]?.name||"";
     const selectedQty=qtyFor(p.id,isBuy?"buy":"sale",defaultVariant);
     const card=document.createElement("article");
-    card.className=`card ${isBuy?"wanted-card":""}${reserved?" reserved-card":""}`;
+    card.className=`card ${isBuy?"wanted-card":""}${reserved?" reserved-card":""}${sold?" sold-card":""}`;
 
     const statusText=isBuy
       ? (limit===0 ? "已收齊" : limit<=2 ? `還缺 ${limit}` : `需求 ${limit}`)
-      : (reserved ? "已預訂" : limit===0 ? "已售完" : limit<=2 ? `僅剩 ${limit}` : `庫存 ${limit}`);
+      : (sold ? "售完" : reserved ? "已預訂" : limit===0 ? "已售完" : limit<=2 ? `僅剩 ${limit}` : `庫存 ${limit}`);
 
     card.innerHTML=`
       <div class="card-media"><img src="${p.imageData || ""}" alt="${esc(p.name)}"></div>
       <div class="card-body">
-        <span class="badge">${esc(p.category)}</span>${p.isNew?`<span class="new-badge">新品</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}
+        <span class="badge">${esc(p.category)}</span>${p.isNew?`<span class="new-badge">新品</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}${sold?`<span class="sold-badge">售完</span>`:""}
         <div class="card-title">${esc(p.name)}</div>
         <div class="price">${isBuy?"收購價：":""}${esc(p.price)}</div>
         <div class="stock ${limit===0?"out":limit<=2?"low":""}">${statusText}</div>
@@ -1037,9 +1056,11 @@ $("#productCount").textContent=`${list.length} 件商品`;
           ${variants.length?`<div class="variant-picker"><span>款式</span><select class="variant-select">${variants.map(v=>`<option value="${esc(v.name)}" ${v.stock===0?"disabled":""}>${esc(v.name)}｜${isBuy?"需求":"庫存"} ${v.stock}</option>`).join("")}</select></div>`:""}
           <div class="buy-actions ${isBuy?"offer-actions":""}">
             <span class="qty-label">${isBuy?"提供數量":"數量"}</span>
-            <input class="qty" type="number" min="1" max="${variants.length?variantStock(p,defaultVariant):limit}" value="${Math.max(1,selectedQty||1)}" ${(limit===0||reserved)?"disabled":""}>
-            <button class="btn primary add-cart ${reserved?"reserved-disabled":""}" ${(limit===0||reserved)?"disabled":""}>${
-              reserved
+            <input class="qty" type="number" min="1" max="${variants.length?variantStock(p,defaultVariant):limit}" value="${Math.max(1,selectedQty||1)}" ${(limit===0||reserved||sold)?"disabled":""}>
+            <button class="btn primary add-cart ${(reserved||sold)?"reserved-disabled":""}" ${(limit===0||reserved||sold)?"disabled":""}>${
+              sold
+                ? "售完"
+                : reserved
                 ? "已預訂"
                 : limit===0
                 ? (isBuy?"已收齊":"售完")
@@ -1094,6 +1115,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
         };
       }
       if(addBtn)addBtn.onclick=()=>{
+        if(sold){toast("此商品已售完");return;}
         if(reserved){toast("此商品已預訂");return;}
         addToList(p,qtyInput?.value||1,isBuy?"buy":"sale",variantSelect?.value||"");
         render();
