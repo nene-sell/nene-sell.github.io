@@ -1060,7 +1060,10 @@ $("#productCount").textContent=`${list.length} 件商品`;
           `}
           <div class="actions"><button class="btn edit">編輯</button><button class="btn danger delete">刪除</button></div>
         `:`
-          ${variants.length?`<div class="variant-picker"><span>款式</span><select class="variant-select">${variants.map(v=>`<option value="${esc(v.name)}" ${v.stock===0?"disabled":""}>${esc(v.name)}｜${isBuy?"需求":"庫存"} ${v.stock}</option>`).join("")}</select></div>`:""}
+          ${variants.length
+  ? `<div class="variant-picker"><span>款式</span><select class="variant-select">${variants.map(v=>`<option value="${esc(v.name)}" ${v.stock===0?"disabled":""}>${esc(v.name)}｜${isBuy?"需求":"庫存"} ${v.stock}</option>`).join("")}</select></div>`
+  : `<div class="variant-picker variant-placeholder"><span>款式</span><select class="variant-select" disabled><option>無款式</option></select></div>`
+}
           <div class="buy-actions ${isBuy?"offer-actions":""}">
             <span class="qty-label">${isBuy?"提供數量":"數量"}</span>
             <input class="qty" type="number" min="1" max="${variants.length?variantStock(p,defaultVariant):limit}" value="${Math.max(1,selectedQty||1)}" ${(limit===0||reserved||sold)?"disabled":""}>
@@ -2767,6 +2770,21 @@ main.wrap{
 }
 .card.sold-card .stock{
   color:#715e54 !important;
+}
+</style>
+
+
+<style>
+/* 沒有款式的商品也保留同樣的款式框，灰掉不可點 */
+.variant-placeholder select:disabled{
+  opacity:.55 !important;
+  cursor:not-allowed !important;
+  background:#e3d8cf !important;
+  color:#8d7d72 !important;
+  border-color:#cbb8aa !important;
+}
+.variant-placeholder span{
+  opacity:.65;
 }
 </style>
 
