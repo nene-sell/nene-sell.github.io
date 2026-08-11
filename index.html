@@ -746,7 +746,8 @@ function getVariants(p){
     ? p.variants
         .map(v=>({
           name:String(v?.name||"").trim(),
-          stock:Math.max(0,Math.floor(Number(v?.stock)||0))
+          stock:Math.max(0,Math.floor(Number(v?.stock)||0)),
+          imageData:String(v?.imageData||"")
         }))
         .filter(v=>v.name)
     : [];
@@ -1031,7 +1032,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
       : (sold ? "售完" : reserved ? "已預訂" : limit===0 ? "已售完" : `庫存 ${limit}`);
 
     card.innerHTML=`
-      <div class="card-media"><img src="${p.imageData || ""}" alt="${esc(p.name)}"></div>
+      <div class="card-media"><img src="${(variants.find(v=>v.name===defaultVariant)?.imageData)||p.imageData||""}" alt="${esc(p.name)}"></div>
       <div class="card-body">
         <div class="badge-row"><span class="badge">${esc(p.category)}</span>${p.isNew?`<span class="new-badge">新品</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}${sold?`<span class="sold-badge">售完</span>`:""}</div>
         <div class="card-title">${esc(p.name)}</div>
@@ -1085,7 +1086,11 @@ $("#productCount").textContent=`${list.length} 件商品`;
     const cardMedia=card.querySelector(".card-media");
     if(cardMedia && p.imageData){
       cardMedia.title=p.realImageData ? "點擊查看商品圖 / 實體圖" : "點擊查看大圖";
-      cardMedia.onclick=()=>openPhotoLightbox(p);
+      cardMedia.onclick=()=>{
+        const selectedName=card.querySelector(".variant-select")?.value||defaultVariant;
+        const selectedVariant=variants.find(v=>v.name===selectedName);
+        openPhotoLightbox(selectedVariant?.imageData ? {...p,imageData:selectedVariant.imageData} : p);
+      };
     }
 
     if(isAdmin()){
@@ -1122,6 +1127,9 @@ $("#productCount").textContent=`${list.length} 件商品`;
         variantSelect.onchange=()=>{
           const lim=variantStock(p,variantSelect.value);
           qtyInput.max=lim; qtyInput.value=1; qtyInput.disabled=lim===0; addBtn.disabled=lim===0;
+          const selectedVariant=variants.find(v=>v.name===variantSelect.value);
+          const img=card.querySelector(".card-media img");
+          if(img) img.src=selectedVariant?.imageData||p.imageData||"";
         };
       }
       if(addBtn)addBtn.onclick=()=>{
@@ -1180,14 +1188,41 @@ async function compressImage(file){
   return out;
 }
 
-function addVariantRow(name="",stock=0){
+function addVariantRow(name="",stock=0,imageData=""){
   const row=document.createElement("div"); row.className="variant-row";
-  row.innerHTML=`<input class="variant-name" placeholder="例如：黑色" value="${esc(name)}"><input class="variant-stock-input" type="number" min="0" step="1" value="${Math.max(0,Math.floor(Number(stock)||0))}"><button class="btn danger variant-remove" type="button">刪除</button>`;
+  row.dataset.imageData=imageData||"";
+  row.innerHTML=`
+    <input class="variant-name" placeholder="例如：黑色" value="${esc(name)}">
+    <input class="variant-stock-input" type="number" min="0" step="1" value="${Math.max(0,Math.floor(Number(stock)||0))}">
+    <label class="variant-image-btn" title="款式圖片（選填）">
+      <span>圖片</span>
+      <input class="variant-image-input" type="file" accept="image/*">
+    </label>
+    <img class="variant-image-preview ${imageData?"":"hidden"}" src="${imageData||""}" alt="款式圖片預覽">
+    <button class="btn danger variant-remove" type="button">刪除</button>`;
   row.querySelector(".variant-remove").onclick=()=>row.remove();
+  const input=row.querySelector(".variant-image-input");
+  const preview=row.querySelector(".variant-image-preview");
+  input.onchange=async()=>{
+    const file=input.files?.[0];
+    if(!file)return;
+    try{
+      row.dataset.imageData=await compressImage(file);
+      preview.src=row.dataset.imageData;
+      preview.classList.remove("hidden");
+    }catch(err){
+      input.value="";
+      toast(err.message||"款式圖片處理失敗");
+    }
+  };
   $("#variantRows").appendChild(row);
 }
-function loadVariantRows(p){$("#variantRows").innerHTML="";getVariants(p).forEach(v=>addVariantRow(v.name,v.stock));}
-function collectVariants(){return $$(".variant-row",$("#variantRows")).map(r=>({name:r.querySelector(".variant-name").value.trim(),stock:Math.max(0,Math.floor(Number(r.querySelector(".variant-stock-input").value)||0))})).filter(v=>v.name);}
+function loadVariantRows(p){$("#variantRows").innerHTML="";getVariants(p).forEach(v=>addVariantRow(v.name,v.stock,v.imageData||""));}
+function collectVariants(){return $$(".variant-row",$("#variantRows")).map(r=>({
+  name:r.querySelector(".variant-name").value.trim(),
+  stock:Math.max(0,Math.floor(Number(r.querySelector(".variant-stock-input").value)||0)),
+  imageData:r.dataset.imageData||""
+})).filter(v=>v.name);}
 
 function updateProductFormMode(){
   const buy=$("#productCategory").value==="收購區";
@@ -1232,7 +1267,7 @@ function openProduct(p=null){
 }
 
 $("#productCategory").addEventListener("change",updateProductFormMode);
-$("#addVariantBtn").onclick=()=>addVariantRow("",0);
+$("#addVariantBtn").onclick=()=>addVariantRow("",0,"");
 
 $("#productImage").addEventListener("change", async e=>{
   const file=e.target.files[0];
@@ -2889,6 +2924,46 @@ main.wrap{
     padding:2px 6px !important;
     font-size:9px !important;
   }
+}
+</style>
+
+<style>
+/* === 款式圖片（選填）：只有管理員編輯時多一個小圖片按鈕 === */
+.variant-row{
+  grid-template-columns:minmax(0,1fr) 72px auto 38px auto !important;
+  align-items:center;
+}
+.variant-image-btn{
+  height:38px;
+  padding:0 9px;
+  border:1px solid #b99b84;
+  border-radius:9px;
+  background:#fffaf6;
+  color:#6d574a;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  font-size:11px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.variant-image-btn input{display:none !important}
+.variant-image-preview{
+  width:36px;
+  height:36px;
+  object-fit:cover;
+  border-radius:8px;
+  border:1px solid #cdb9aa;
+  background:#fffaf6;
+}
+@media(max-width:600px){
+  .variant-row{
+    grid-template-columns:minmax(0,1fr) 66px auto 34px auto !important;
+    gap:5px !important;
+  }
+  .variant-image-btn{padding:0 7px;font-size:10px}
+  .variant-image-preview{width:32px;height:32px}
 }
 </style>
 
