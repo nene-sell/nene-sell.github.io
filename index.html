@@ -1008,7 +1008,14 @@ function render(){
     );
   }
 
-  /* 售完商品自動沉底：保留原本相對順序，只把售完移到最後 */
+  /* 自由排序：有 sortOrder 用它；舊商品則維持原本「新到舊」 */
+  const orderValue=(p)=>{
+    if(Number.isFinite(Number(p?.sortOrder)))return Number(p.sortOrder);
+    return -((p?.createdAt?.seconds||0)*1000);
+  };
+  list.sort((a,b)=>orderValue(a)-orderValue(b));
+
+  /* 售完商品自動沉底：保留自由排序結果，只把售完移到最後 */
   list = list
     .map((p,index)=>({
       p,
@@ -1116,20 +1123,44 @@ $("#productCount").textContent=`${list.length} 件商品`;
       card.querySelector(".edit").onclick=()=>openProduct(p);
       card.querySelector(".delete").onclick=()=>deleteProduct(p);
 
+      const productOrderValue=(x)=>{
+        if(Number.isFinite(Number(x?.sortOrder)))return Number(x.sortOrder);
+        return -((x?.createdAt?.seconds||0)*1000);
+      };
+
       const moveProduct=async(direction)=>{
-        const sameCategory=products.filter(x=>x.category===p.category);
+        const sameCategory=products
+          .filter(x=>x.category===p.category)
+          .slice()
+          .sort((a,b)=>productOrderValue(a)-productOrderValue(b));
+
         const pos=sameCategory.findIndex(x=>x.id===p.id);
         const targetPos=pos+direction;
-        if(pos<0 || targetPos<0 || targetPos>=sameCategory.length)return;
+        if(pos<0 || targetPos<0 || targetPos>=sameCategory.length){
+          toast(direction<0?"已經是第一個了":"已經是最後一個了");
+          return;
+        }
 
         const target=sameCategory[targetPos];
-        const a=products.findIndex(x=>x.id===p.id);
-        const b=products.findIndex(x=>x.id===target.id);
-        if(a<0 || b<0)return;
+        const currentOrder=productOrderValue(p);
+        const targetOrder=productOrderValue(target);
 
-        [products[a],products[b]]=[products[b],products[a]];
-        saveProducts();
-        render();
+        try{
+          await Promise.all([
+            updateDoc(doc(db,"products",p.id),{
+              sortOrder:targetOrder,
+              updatedAt:serverTimestamp()
+            }),
+            updateDoc(doc(db,"products",target.id),{
+              sortOrder:currentOrder,
+              updatedAt:serverTimestamp()
+            })
+          ]);
+          toast(direction<0?"已往前移":"已往後移");
+        }catch(err){
+          console.error(err);
+          toast("排序失敗");
+        }
       };
 
       const upBtn=card.querySelector(".order-up");
@@ -1391,6 +1422,7 @@ $("#productForm").addEventListener("submit", async e=>{
     }else{
       await addDoc(collection(db,"products"),{
         ...payload,
+        sortOrder:-Date.now(),
         createdAt:serverTimestamp()
       });
     }
@@ -1575,7 +1607,6 @@ onSnapshot(
   collection(db,"products"),
   snap=>{
     products=snap.docs.map(d=>({id:d.id,...d.data()}));
-    products.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
     $("#status").textContent="已連線";
     render();
     renderCart();
