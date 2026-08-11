@@ -1234,7 +1234,7 @@ async function compressImage(file){
     i.src=dataUrl;
   });
 
-  const maxSide = 1400;
+  const maxSide = 900;
   const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
   const w = Math.max(1, Math.round(img.width * scale));
   const h = Math.max(1, Math.round(img.height * scale));
@@ -1244,7 +1244,7 @@ async function compressImage(file){
   const ctx=canvas.getContext("2d");
   ctx.drawImage(img,0,0,w,h);
 
-  let quality=0.90;
+  let quality=0.78;
   let out=canvas.toDataURL("image/jpeg",quality);
 
   // Firestore document max size is 1 MiB. Keep image comfortably below that.
