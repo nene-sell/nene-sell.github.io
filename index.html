@@ -1033,7 +1033,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
     card.innerHTML=`
       <div class="card-media"><img src="${p.imageData || ""}" alt="${esc(p.name)}"></div>
       <div class="card-body">
-        <span class="badge">${esc(p.category)}</span>${p.isNew?`<span class="new-badge">新品</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}${sold?`<span class="sold-badge">售完</span>`:""}
+        <div class="badge-row"><span class="badge">${esc(p.category)}</span>${p.isNew?`<span class="new-badge">新品</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}${sold?`<span class="sold-badge">售完</span>`:""}</div>
         <div class="card-title">${esc(p.name)}</div>
         <div class="price">${isBuy?"收購價：":""}${esc(p.price)}</div>
         <div class="stock ${limit===0?"out":limit<=2?"low":""}">${statusText}</div>
@@ -2852,6 +2852,43 @@ main.wrap{
 #loginPassword::placeholder{
   color:#b9ada5 !important;
   opacity:.22 !important;
+}
+</style>
+
+<style>
+/* 分類／新品／已預訂／售完固定在同一排 */
+.badge-row{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  flex-wrap:wrap !important;
+  gap:5px !important;
+  margin-bottom:7px !important;
+}
+.badge-row .badge,
+.badge-row .new-badge,
+.badge-row .reserved-badge,
+.badge-row .sold-badge{
+  display:inline-flex !important;
+  width:auto !important;
+  max-width:max-content !important;
+  margin:0 !important;
+  flex:0 0 auto !important;
+}
+.badge-row .sold-badge{
+  padding:3px 7px !important;
+  font-size:10px !important;
+  line-height:1.25 !important;
+}
+@media(max-width:600px){
+  .badge-row{
+    gap:4px !important;
+    margin-bottom:5px !important;
+  }
+  .badge-row .sold-badge{
+    padding:2px 6px !important;
+    font-size:9px !important;
+  }
 }
 </style>
 
