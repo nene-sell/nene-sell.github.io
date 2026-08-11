@@ -3057,3 +3057,46 @@ main.wrap{
 }
 </style>
 
+<style>
+/* === 管理員商品操作列：橫向排列 === */
+.card .actions{
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:center !important;
+  gap:6px !important;
+  flex-wrap:nowrap !important;
+}
+.card .actions .btn{
+  width:auto !important;
+  min-width:0 !important;
+  height:34px !important;
+  padding:0 10px !important;
+  white-space:nowrap !important;
+  writing-mode:horizontal-tb !important;
+  text-orientation:mixed !important;
+  line-height:1 !important;
+}
+.card .actions .order-up,
+.card .actions .order-down{
+  width:34px !important;
+  min-width:34px !important;
+  padding:0 !important;
+}
+@media(max-width:600px){
+  .card .actions{
+    gap:4px !important;
+  }
+  .card .actions .btn{
+    height:32px !important;
+    padding:0 8px !important;
+    font-size:11px !important;
+  }
+  .card .actions .order-up,
+  .card .actions .order-down{
+    width:32px !important;
+    min-width:32px !important;
+    padding:0 !important;
+  }
+}
+</style>
+
