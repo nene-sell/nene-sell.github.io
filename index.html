@@ -1007,6 +1007,20 @@ function render(){
       String(p.price||"").toLowerCase().includes(q)
     );
   }
+
+  /* 售完商品自動沉底：保留原本相對順序，只把售完移到最後 */
+  list = list
+    .map((p,index)=>({
+      p,
+      index,
+      sold: p.category!=="收購區" && p.status!=="reserved" && (p.status==="sold" || getStock(p)<=0)
+    }))
+    .sort((a,b)=>{
+      if(a.sold!==b.sold) return a.sold ? 1 : -1;
+      return a.index-b.index;
+    })
+    .map(x=>x.p);
+
 $("#productCount").textContent=`${list.length} 件商品`;
   $("#sectionTitle").textContent=
     activeCategory==="全部" ? "全部商品" :
