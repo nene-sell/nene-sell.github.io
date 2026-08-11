@@ -1073,7 +1073,12 @@ $("#productCount").textContent=`${list.length} 件商品`;
               </div>
             </div>
           `}
-          <div class="actions"><button class="btn edit">編輯</button><button class="btn danger delete">刪除</button></div>
+          <div class="actions">
+            <button class="btn order-up" type="button" title="往前移">↑</button>
+            <button class="btn order-down" type="button" title="往後移">↓</button>
+            <button class="btn edit">編輯</button>
+            <button class="btn danger delete">刪除</button>
+          </div>
         `:`
           ${variants.length
   ? `<div class="variant-picker"><span>款式</span><select class="variant-select">${variants.map(v=>`<option value="${esc(v.name)}" ${v.stock===0?"disabled":""}>${esc(v.name)}｜${isBuy?"需求":"庫存"} ${v.stock}</option>`).join("")}</select></div>`
@@ -1110,6 +1115,27 @@ $("#productCount").textContent=`${list.length} 件商品`;
     if(isAdmin()){
       card.querySelector(".edit").onclick=()=>openProduct(p);
       card.querySelector(".delete").onclick=()=>deleteProduct(p);
+
+      const moveProduct=async(direction)=>{
+        const sameCategory=products.filter(x=>x.category===p.category);
+        const pos=sameCategory.findIndex(x=>x.id===p.id);
+        const targetPos=pos+direction;
+        if(pos<0 || targetPos<0 || targetPos>=sameCategory.length)return;
+
+        const target=sameCategory[targetPos];
+        const a=products.findIndex(x=>x.id===p.id);
+        const b=products.findIndex(x=>x.id===target.id);
+        if(a<0 || b<0)return;
+
+        [products[a],products[b]]=[products[b],products[a]];
+        saveProducts();
+        render();
+      };
+
+      const upBtn=card.querySelector(".order-up");
+      const downBtn=card.querySelector(".order-down");
+      if(upBtn)upBtn.onclick=()=>moveProduct(-1);
+      if(downBtn)downBtn.onclick=()=>moveProduct(1);
 
       if(!variants.length){
         if(isBuy){
@@ -2978,6 +3004,25 @@ main.wrap{
   }
   .variant-image-btn{padding:0 7px;font-size:10px}
   .variant-image-preview{width:32px;height:32px}
+}
+</style>
+
+<style>
+/* === 管理員自由排序：訪客不會看到 === */
+.actions .order-up,
+.actions .order-down{
+  width:32px !important;
+  min-width:32px !important;
+  padding-left:0 !important;
+  padding-right:0 !important;
+  font-weight:900 !important;
+}
+@media(max-width:600px){
+  .actions .order-up,
+  .actions .order-down{
+    width:29px !important;
+    min-width:29px !important;
+  }
 }
 </style>
 
