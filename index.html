@@ -584,7 +584,10 @@ dialog input:focus,dialog select:focus{border-color:#666}
       <div class="bulk-admin">
         <label>優惠數量<input id="discountQty" type="number" min="2" step="1" placeholder="例如：3"></label>
         <label>優惠總價<input id="discountPrice" type="number" min="0" step="0.01" placeholder="例如：210"></label>
-        <small>兩格都有填才啟用，例如「3 個優惠 210」。</small>
+        <label class="discount-text-field">優惠文字
+          <input id="discountText" maxlength="12" placeholder="例如：任選">
+        </label>
+        <small>優惠文字可自行輸入；留空時預設顯示「任選」。</small>
       </div>
     </div>
     <label><span id="stockFieldLabel">庫存</span>
@@ -1109,7 +1112,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
         <div class="badge-row"><span class="badge">${esc(p.category)}</span>${isNewActive(p)?`<span class="new-badge">新品</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}${sold?`<span class="sold-badge">售完</span>`:""}</div>
         <div class="card-title">${esc(p.name)}</div>
         <div class="price">${isBuy?"收購價：":""}${esc(p.price)}</div>
-        ${!isBuy&&bulkDeal(p)?`<div class="bulk-deal">任選 ${bulkDeal(p).qty} 個總額 ${neatNum(bulkDeal(p).price)}${priceParts(p.price)?.unit?` ${esc(priceParts(p.price).unit)}`:""}</div>`:""}
+        ${!isBuy&&bulkDeal(p)?`<div class="bulk-deal">${esc((p.discountText||"").trim()||"任選")} ${bulkDeal(p).qty} 個總額 ${neatNum(bulkDeal(p).price)}${priceParts(p.price)?.unit?` ${esc(priceParts(p.price).unit)}`:""}</div>`:""}
         <div class="stock ${limit===0?"out":limit<=2?"low":""}">${statusText}</div>
 
 
@@ -1363,6 +1366,7 @@ function openProduct(p=null){
   $("#productPrice").value=p?.price||"";
   $("#discountQty").value=p?.discountQty||"";
   $("#discountPrice").value=p?.discountPrice??"";
+  $("#discountText").value=p?.discountText||"";
   $("#productStock").value=getVariants(p).length?0:(Number.isFinite(Number(p?.stock))?Number(p.stock):1);
   if($("#productIsNew")) $("#productIsNew").checked=!!p && isNewActive(p);
   if($("#productStatus")) $("#productStatus").value=p?.status||"selling";
@@ -1474,6 +1478,7 @@ $("#productForm").addEventListener("submit", async e=>{
         const q=parseInt($("#discountQty").value||"",10), d=$("#discountPrice").value;
         return Number.isInteger(q)&&q>=2&&d!==""&&Number.isFinite(Number(d)) ? Number(d) : null;
       })(),
+      discountText:($("#discountText")?.value||"").trim(),
       status:$("#productStatus")?.value||"selling",
       isNew:wantsNew,
       newUntilMs,
@@ -3201,3 +3206,9 @@ main.wrap{
 }
 </style>
 
+
+<style>
+.bulk-admin .discount-text-field{
+  grid-column:1/-1;
+}
+</style>
