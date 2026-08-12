@@ -923,7 +923,7 @@ function renderCart(){
       <img src="${p.imageData||""}" alt="${esc(p.name)}">
       <div class="cart-item-info">
         <div class="cart-item-name">${esc(p.name)}${item.variant?` <span class="cart-variant">｜${esc(item.variant)}</span>`:""}</div>
-        <div class="cart-item-meta">${buy?"收購價：":""}${esc(p.price)} × ${item.qty}${!buy&&deal?`　<span class="deal-applied">款式合計 ${sameProductQty} 個${groupDiscounted&&sameProductQty>=deal.qty?`・優惠總額 ${neatNum(groupDiscounted.amount)}${groupDiscounted.unit?` ${esc(groupDiscounted.unit)}`:""}`:""}</span>`:""}</div>
+        <div class="cart-item-meta">${buy?"收購價：":""}${esc(p.price)} × ${item.qty}${!buy&&deal&&isFirstSameProduct&&groupDiscounted&&sameProductQty>=deal.qty?`　<span class="deal-applied">${esc((p.discountText||"").trim()||"任選")} ${sameProductQty} 個・總額 ${neatNum(groupDiscounted.amount)}${groupDiscounted.unit?` ${esc(groupDiscounted.unit)}`:""}</span>`:""}</div>
       </div>
       <div class="cart-line-total">${lineTotal}</div>
       <div class="cart-item-controls">
@@ -3212,3 +3212,23 @@ main.wrap{
   grid-column:1/-1;
 }
 </style>
+
+<style>
+/* 結算優惠：同品項只顯示一次，不在每個款式重複 */
+.deal-applied{
+  display:inline-block;
+  margin-left:4px;
+  white-space:nowrap;
+}
+</style>
+
+<style>
+/* 優惠文字淡一點 */
+.bulk-deal{
+  color:#b99678 !important;
+}
+.deal-applied{
+  color:#b99678 !important;
+}
+</style>
+
