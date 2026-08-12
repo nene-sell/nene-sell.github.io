@@ -923,7 +923,7 @@ function renderCart(){
       <img src="${p.imageData||""}" alt="${esc(p.name)}">
       <div class="cart-item-info">
         <div class="cart-item-name">${esc(p.name)}${item.variant?` <span class="cart-variant">｜${esc(item.variant)}</span>`:""}</div>
-        <div class="cart-item-meta">${buy?"收購價：":""}${esc(p.price)} × ${item.qty}${!buy&&deal&&isFirstSameProduct&&groupDiscounted&&sameProductQty>=deal.qty?`　<span class="deal-applied">${esc((p.discountText||"").trim()||"任選")} ${sameProductQty} 個・總額 ${neatNum(groupDiscounted.amount)}${groupDiscounted.unit?` ${esc(groupDiscounted.unit)}`:""}</span>`:""}</div>
+        <div class="cart-item-meta">${buy?"收購價：":""}${esc(p.price)} × ${item.qty}${!buy&&deal&&isFirstSameProduct&&groupDiscounted&&sameProductQty>=deal.qty?`　<span class="deal-applied">${esc((p.discountText||"").trim()||"任選")} ${sameProductQty} 個・總額 ${neatNum(groupDiscounted.amount)}${groupDiscounted.unit?` ${esc(groupDiscounted.unit)}`:""}</span>`:""}${!buy&&deal&&isFirstSameProduct&&sameProductQty>0&&(sameProductQty%deal.qty)!==0?`　<span class="deal-next-cart">再買 ${deal.qty-(sameProductQty%deal.qty)} 個享優惠 ♡</span>`:""}</div>
       </div>
       <div class="cart-line-total">${lineTotal}</div>
       <div class="cart-item-controls">
@@ -1044,6 +1044,19 @@ function bulkTotal(p,qty){
   return {amount:sets*deal.price+rest*base.amount,unit:base.unit};
 }
 function neatNum(n){ return Number.isInteger(n)?String(n):String(Math.round(n*100)/100); }
+function saleQtyAllVariants(id){
+  return cart.filter(x=>x.id===id).reduce((s,x)=>s+(Number(x.qty)||0),0);
+}
+function dealHintText(p){
+  const deal=bulkDeal(p);
+  if(!deal)return "";
+  const qty=saleQtyAllVariants(p.id);
+  if(qty<=0)return "";
+  const rem=qty%deal.qty;
+  if(rem===0)return "";
+  return `再買 ${deal.qty-rem} 個享優惠 ♡`;
+}
+
 
 function render(){
   const q=$("#searchInput").value.trim().toLowerCase();
@@ -1112,7 +1125,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
         <div class="badge-row"><span class="badge">${esc(p.category)}</span>${isNewActive(p)?`<span class="new-badge">新品</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}${sold?`<span class="sold-badge">售完</span>`:""}</div>
         <div class="card-title">${esc(p.name)}</div>
         <div class="price">${isBuy?"收購價：":""}${esc(p.price)}</div>
-        ${!isBuy&&bulkDeal(p)?`<div class="bulk-deal">${esc((p.discountText||"").trim()||"任選")} ${bulkDeal(p).qty} 個總額 ${neatNum(bulkDeal(p).price)}${priceParts(p.price)?.unit?` ${esc(priceParts(p.price).unit)}`:""}</div>`:""}
+        ${!isBuy&&bulkDeal(p)?`<div class="bulk-deal">${esc((p.discountText||"").trim()||"任選")} ${bulkDeal(p).qty} 個總額 ${neatNum(bulkDeal(p).price)}${priceParts(p.price)?.unit?` ${esc(priceParts(p.price).unit)}`:""}</div>${dealHintText(p)?`<div class="deal-next-hint">${dealHintText(p)}</div>`:""}`:""}
         <div class="stock ${limit===0?"out":limit<=2?"low":""}">${statusText}</div>
 
 
@@ -3232,3 +3245,23 @@ main.wrap{
 }
 </style>
 
+
+<style>
+.deal-next-hint{
+  min-height:15px;margin-top:1px;font-size:11px;font-weight:700;
+  color:#b9a18e;opacity:.9;
+}
+</style>
+
+<style>
+/* 結算區差幾個享優惠：同品項只提示一次 */
+.deal-next-cart{
+  display:inline-block;
+  margin-left:4px;
+  font-size:11px;
+  font-weight:700;
+  color:#b9a18e;
+  opacity:.9;
+  white-space:nowrap;
+}
+</style>
