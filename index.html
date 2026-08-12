@@ -894,28 +894,33 @@ function renderCart(){
 
     totalCount+=item.qty;
     const parsed=parsePrice(p.price);
-    const discounted=!buy ? bulkTotal(p,item.qty) : null;
-    if(discounted){
-      const unit=discounted.unit||"金額";
-      totals[unit]=(totals[unit]||0)+discounted.amount;
-    }else if(parsed.amount!==null){
+    const sameProductQty=!buy
+      ? list.filter(x=>x.id===item.id).reduce((sum,x)=>sum+(Number(x.qty)||0),0)
+      : Number(item.qty)||0;
+    const deal=(!buy)?bulkDeal(p):null;
+    const groupDiscounted=deal ? bulkTotal(p,sameProductQty) : null;
+
+    // Only add a product-card total once, even if several variants are in the cart.
+    const isFirstSameProduct=list.findIndex(x=>x.id===item.id)===list.indexOf(item);
+    if(groupDiscounted && isFirstSameProduct){
+      const unit=groupDiscounted.unit||"金額";
+      totals[unit]=(totals[unit]||0)+groupDiscounted.amount;
+    }else if(!groupDiscounted && parsed.amount!==null){
       const unit=parsed.unit||"金額";
       totals[unit]=(totals[unit]||0)+(parsed.amount*item.qty);
     }
 
     const row=document.createElement("div");
     row.className="cart-item";
-    const lineTotal=discounted
-      ? `${neatNum(discounted.amount)} ${esc(discounted.unit)}`
-      : parsed.amount!==null
-        ? `${Number.isInteger(parsed.amount*item.qty)?parsed.amount*item.qty:(parsed.amount*item.qty).toFixed(2)} ${esc(parsed.unit)}`
-        : esc(p.price);
+    const lineTotal=parsed.amount!==null
+      ? `${Number.isInteger(parsed.amount*item.qty)?parsed.amount*item.qty:(parsed.amount*item.qty).toFixed(2)} ${esc(parsed.unit)}`
+      : esc(p.price);
 
     row.innerHTML=`
       <img src="${p.imageData||""}" alt="${esc(p.name)}">
       <div class="cart-item-info">
         <div class="cart-item-name">${esc(p.name)}${item.variant?` <span class="cart-variant">｜${esc(item.variant)}</span>`:""}</div>
-        <div class="cart-item-meta">${buy?"收購價：":""}${esc(p.price)} × ${item.qty}${!buy&&bulkDeal(p)&&discounted?`　<span class="deal-applied">優惠後 ${neatNum(discounted.amount)}${discounted.unit?` ${esc(discounted.unit)}`:""}</span>`:""}</div>
+        <div class="cart-item-meta">${buy?"收購價：":""}${esc(p.price)} × ${item.qty}${!buy&&deal?`　<span class="deal-applied">款式合計 ${sameProductQty} 個${groupDiscounted&&sameProductQty>=deal.qty?`・優惠總額 ${neatNum(groupDiscounted.amount)}${groupDiscounted.unit?` ${esc(groupDiscounted.unit)}`:""}`:""}</span>`:""}</div>
       </div>
       <div class="cart-line-total">${lineTotal}</div>
       <div class="cart-item-controls">
@@ -1104,7 +1109,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
         <div class="badge-row"><span class="badge">${esc(p.category)}</span>${isNewActive(p)?`<span class="new-badge">新品</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}${sold?`<span class="sold-badge">售完</span>`:""}</div>
         <div class="card-title">${esc(p.name)}</div>
         <div class="price">${isBuy?"收購價：":""}${esc(p.price)}</div>
-        ${!isBuy&&bulkDeal(p)?`<div class="bulk-deal">滿 ${bulkDeal(p).qty} 個優惠 ${neatNum(bulkDeal(p).price)}${priceParts(p.price)?.unit?` ${esc(priceParts(p.price).unit)}`:""}</div>`:""}
+        ${!isBuy&&bulkDeal(p)?`<div class="bulk-deal">任選 ${bulkDeal(p).qty} 個總額 ${neatNum(bulkDeal(p).price)}${priceParts(p.price)?.unit?` ${esc(priceParts(p.price).unit)}`:""}</div>`:""}
         <div class="stock ${limit===0?"out":limit<=2?"low":""}">${statusText}</div>
 
 
@@ -3172,3 +3177,27 @@ main.wrap{
 .deal-applied{font-weight:800;color:#c97967}
 @media(max-width:520px){.bulk-admin{grid-template-columns:1fr}.bulk-admin small{grid-column:auto}}
 </style>
+
+<style>
+/* === 多件優惠提示：跟庫存不同色＋小小跳動 === */
+.bulk-deal{
+  color:#b07a3f !important;
+  font-weight:900 !important;
+  display:inline-block !important;
+  animation:deal-bounce 1.8s ease-in-out infinite;
+  transform-origin:center bottom;
+}
+.deal-applied{
+  color:#b07a3f !important;
+  font-weight:900 !important;
+}
+@keyframes deal-bounce{
+  0%,100%{transform:translateY(0)}
+  45%{transform:translateY(-2px)}
+  60%{transform:translateY(0)}
+}
+@media (prefers-reduced-motion: reduce){
+  .bulk-deal{animation:none !important}
+}
+</style>
+
