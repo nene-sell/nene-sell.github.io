@@ -581,6 +581,11 @@ dialog input:focus,dialog select:focus{border-color:#666}
       <label>價格
         <input id="productPrice" placeholder="例如：80 糖" required maxlength="40">
       </label>
+      <div class="bulk-admin">
+        <label>優惠數量<input id="discountQty" type="number" min="2" step="1" placeholder="例如：3"></label>
+        <label>優惠總價<input id="discountPrice" type="number" min="0" step="0.01" placeholder="例如：210"></label>
+        <small>兩格都有填才啟用，例如「3 個優惠 210」。</small>
+      </div>
     </div>
     <label><span id="stockFieldLabel">庫存</span>
       <input id="productStock" type="number" min="0" step="1" value="1" placeholder="例如：5" required>
@@ -889,22 +894,28 @@ function renderCart(){
 
     totalCount+=item.qty;
     const parsed=parsePrice(p.price);
-    if(parsed.amount!==null){
+    const discounted=!buy ? bulkTotal(p,item.qty) : null;
+    if(discounted){
+      const unit=discounted.unit||"金額";
+      totals[unit]=(totals[unit]||0)+discounted.amount;
+    }else if(parsed.amount!==null){
       const unit=parsed.unit||"金額";
       totals[unit]=(totals[unit]||0)+(parsed.amount*item.qty);
     }
 
     const row=document.createElement("div");
     row.className="cart-item";
-    const lineTotal=parsed.amount!==null
-      ? `${Number.isInteger(parsed.amount*item.qty)?parsed.amount*item.qty:(parsed.amount*item.qty).toFixed(2)} ${esc(parsed.unit)}`
-      : esc(p.price);
+    const lineTotal=discounted
+      ? `${neatNum(discounted.amount)} ${esc(discounted.unit)}`
+      : parsed.amount!==null
+        ? `${Number.isInteger(parsed.amount*item.qty)?parsed.amount*item.qty:(parsed.amount*item.qty).toFixed(2)} ${esc(parsed.unit)}`
+        : esc(p.price);
 
     row.innerHTML=`
       <img src="${p.imageData||""}" alt="${esc(p.name)}">
       <div class="cart-item-info">
         <div class="cart-item-name">${esc(p.name)}${item.variant?` <span class="cart-variant">｜${esc(item.variant)}</span>`:""}</div>
-        <div class="cart-item-meta">${buy?"收購價：":""}${esc(p.price)} × ${item.qty}</div>
+        <div class="cart-item-meta">${buy?"收購價：":""}${esc(p.price)} × ${item.qty}${!buy&&bulkDeal(p)&&discounted?`　<span class="deal-applied">優惠後 ${neatNum(discounted.amount)}${discounted.unit?` ${esc(discounted.unit)}`:""}</span>`:""}</div>
       </div>
       <div class="cart-line-total">${lineTotal}</div>
       <div class="cart-item-controls">
@@ -1007,6 +1018,25 @@ function isNewActive(p){
   return !!p?.isNew && until>0 && Date.now()<until;
 }
 
+
+function bulkDeal(p){
+  const qty=Number(p?.discountQty), price=Number(p?.discountPrice);
+  return Number.isInteger(qty)&&qty>=2&&Number.isFinite(price)&&price>=0 ? {qty,price} : null;
+}
+function priceParts(value){
+  const m=String(value??"").trim().match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
+  return m ? {amount:Number(m[1]),unit:(m[2]||"").trim()} : null;
+}
+function bulkTotal(p,qty){
+  const base=priceParts(p?.price), deal=bulkDeal(p);
+  if(!base)return null;
+  qty=Math.max(0,Number(qty)||0);
+  if(!deal)return {amount:base.amount*qty,unit:base.unit};
+  const sets=Math.floor(qty/deal.qty), rest=qty%deal.qty;
+  return {amount:sets*deal.price+rest*base.amount,unit:base.unit};
+}
+function neatNum(n){ return Number.isInteger(n)?String(n):String(Math.round(n*100)/100); }
+
 function render(){
   const q=$("#searchInput").value.trim().toLowerCase();
   const buyMode=isBuyCategory();
@@ -1074,6 +1104,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
         <div class="badge-row"><span class="badge">${esc(p.category)}</span>${isNewActive(p)?`<span class="new-badge">新品</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}${sold?`<span class="sold-badge">售完</span>`:""}</div>
         <div class="card-title">${esc(p.name)}</div>
         <div class="price">${isBuy?"收購價：":""}${esc(p.price)}</div>
+        ${!isBuy&&bulkDeal(p)?`<div class="bulk-deal">滿 ${bulkDeal(p).qty} 個優惠 ${neatNum(bulkDeal(p).price)}${priceParts(p.price)?.unit?` ${esc(priceParts(p.price).unit)}`:""}</div>`:""}
         <div class="stock ${limit===0?"out":limit<=2?"low":""}">${statusText}</div>
 
 
@@ -1325,6 +1356,8 @@ function openProduct(p=null){
   updateProductFormMode();
   $("#productName").value=p?.name||"";
   $("#productPrice").value=p?.price||"";
+  $("#discountQty").value=p?.discountQty||"";
+  $("#discountPrice").value=p?.discountPrice??"";
   $("#productStock").value=getVariants(p).length?0:(Number.isFinite(Number(p?.stock))?Number(p.stock):1);
   if($("#productIsNew")) $("#productIsNew").checked=!!p && isNewActive(p);
   if($("#productStatus")) $("#productStatus").value=p?.status||"selling";
@@ -1428,6 +1461,14 @@ $("#productForm").addEventListener("submit", async e=>{
       category:$("#productCategory").value,
       name:$("#productName").value.trim(),
       price:$("#productPrice").value.trim(),
+      discountQty:(()=>{
+        const q=parseInt($("#discountQty").value||"",10), d=$("#discountPrice").value;
+        return Number.isInteger(q)&&q>=2&&d!==""&&Number.isFinite(Number(d)) ? q : null;
+      })(),
+      discountPrice:(()=>{
+        const q=parseInt($("#discountQty").value||"",10), d=$("#discountPrice").value;
+        return Number.isInteger(q)&&q>=2&&d!==""&&Number.isFinite(Number(d)) ? Number(d) : null;
+      })(),
       status:$("#productStatus")?.value||"selling",
       isNew:wantsNew,
       newUntilMs,
@@ -3123,3 +3164,11 @@ main.wrap{
 }
 </style>
 
+
+<style>
+.bulk-admin{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:11px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025)}
+.bulk-admin small{grid-column:1/-1;color:var(--muted);font-size:12px}
+.bulk-deal{font-size:12px;font-weight:800;color:#c97967;min-height:18px;margin-top:-2px}
+.deal-applied{font-weight:800;color:#c97967}
+@media(max-width:520px){.bulk-admin{grid-template-columns:1fr}.bulk-admin small{grid-column:auto}}
+</style>
