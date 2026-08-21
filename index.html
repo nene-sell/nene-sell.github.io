@@ -1053,7 +1053,13 @@ function openPhotoLightbox(p){
   const videoBtn=$("#photoTabs .photo-tab[data-photo-kind='video']");
   videoBtn.classList.toggle("hidden",!p.demoVideoPath);
   renderVariantThumbs(p);
-  showProductPhoto(p.realImageData ? "real" : "product");
+  showProductPhoto(
+    p.realImageData
+      ? "real"
+      : p.demoVideoPath
+        ? "video"
+        : "product"
+  );
   $("#photoLightbox").showModal();
 }
 
