@@ -610,13 +610,13 @@ dialog input:focus,dialog select:focus{border-color:#666}
   <div class="hint">有上傳實體圖時，買家點商品圖會直接開啟實體圖，仍可切換查看商品圖。</div>
 </div>
 <div class="field real-photo-field">
-  <label>展示影片（選填）</label>
-  <input id="productDemoVideo" type="file" accept="video/mp4,video/webm,video/quicktime">
+  <label>展示影片檔名／路徑（選填）</label>
+  <input id="productDemoVideoPath" type="text" placeholder="例如：螢幕錄製 2026-08-21 100747.mp4">
   <div class="real-photo-actions">
     <video id="demoVideoPreview" class="real-photo-preview hidden" muted loop playsinline controls></video>
     <button id="removeDemoVideoBtn" class="btn hidden" type="button">移除展示影片</button>
   </div>
-  <div class="hint">建議錄製 3～10 秒、25MB 內。影片會存到 Firebase Storage；首頁仍固定顯示商品圖，點進去才會看到展示影片。</div>
+  <div class="hint">先把影片上傳到這個 GitHub Pages 網站，再填檔名即可；若放在 videos 資料夾，就填 videos/檔名.mp4。</div>
 </div>
 
     </div>
@@ -688,11 +688,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import {
   getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
-  onSnapshot, serverTimestamp, deleteField
+  onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-import {
-  getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAHhPD_c7mJbzQKF1YnrySpBSLLs-IecAw",
@@ -708,7 +705,6 @@ const ADMIN_UID = "m6CfH9lsrmbG4Mw8SzgmlZL8R2i1";
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -719,11 +715,7 @@ let activeGroup = "";
 let currentUser = null;
 let editingImage = "";
 let editingRealImage = "";
-let editingDemoVideoUrl = "";
 let editingDemoVideoPath = "";
-let pendingDemoVideoFile = null;
-let removeDemoVideoOnSave = false;
-let demoPreviewObjectUrl = "";
 let cart = [];
 let offerCart = [];
 
@@ -1003,7 +995,7 @@ function showProductPhoto(kind="product"){
   if(!lightboxProduct)return;
   const productImg=lightboxProduct.imageData||"";
   const realImg=lightboxProduct.realImageData||"";
-  const video=lightboxProduct.demoVideoUrl||lightboxProduct.demoVideoData||"";
+  const video=demoVideoUrl(lightboxProduct.demoVideoPath||"");
   const img=$("#photoLightboxImage"), vid=$("#photoLightboxVideo");
   if(kind==="video" && video){
     img.classList.add("hidden");
@@ -1059,7 +1051,7 @@ function openPhotoLightbox(p){
   const realBtn=$("#photoTabs .photo-tab[data-photo-kind='real']");
   realBtn.classList.toggle("hidden",!p.realImageData);
   const videoBtn=$("#photoTabs .photo-tab[data-photo-kind='video']");
-  videoBtn.classList.toggle("hidden",!(p.demoVideoUrl||p.demoVideoData));
+  videoBtn.classList.toggle("hidden",!p.demoVideoPath);
   renderVariantThumbs(p);
   showProductPhoto(p.realImageData ? "real" : "product");
   $("#photoLightbox").showModal();
@@ -1445,14 +1437,9 @@ function openProduct(p=null){
   $("#productImage").value="";
   editingImage=p?.imageData||"";
   editingRealImage=p?.realImageData||"";
-  editingDemoVideoUrl=p?.demoVideoUrl||p?.demoVideoData||"";
   editingDemoVideoPath=p?.demoVideoPath||"";
-  pendingDemoVideoFile=null;
-  removeDemoVideoOnSave=false;
-  if(demoPreviewObjectUrl){
-    URL.revokeObjectURL(demoPreviewObjectUrl);
-    demoPreviewObjectUrl="";
-  }
+  const demoInput=$("#productDemoVideoPath");
+  if(demoInput)demoInput.value=editingDemoVideoPath;
   updateDemoVideoPreview();
   $("#productRealImage").value="";
   if(editingRealImage){
@@ -1522,13 +1509,27 @@ $("#removeRealImageBtn").onclick=()=>{
 };
 
 
+function normalizeDemoVideoPath(value=""){
+  let s=String(value||"").trim();
+  if(!s)return "";
+  // 也接受完整網址；一般情況只需填 GitHub Pages 根目錄下的檔名或相對路徑。
+  if(/^https?:\/\//i.test(s))return s;
+  s=s.replace(/^\.?\//,"");
+  return s;
+}
+function demoVideoUrl(path=""){
+  const p=normalizeDemoVideoPath(path);
+  if(!p)return "";
+  if(/^https?:\/\//i.test(p))return p;
+  return new URL(p, location.href).href;
+}
 function updateDemoVideoPreview(){
-  const v=$("#demoVideoPreview"), b=$("#removeDemoVideoBtn");
+  const v=$("#demoVideoPreview"), b=$("#removeDemoVideoBtn"), input=$("#productDemoVideoPath");
   if(!v||!b)return;
-
-  const previewSrc = demoPreviewObjectUrl || (!removeDemoVideoOnSave ? editingDemoVideoUrl : "");
-  if(previewSrc){
-    if(v.src!==previewSrc)v.src=previewSrc;
+  const path=normalizeDemoVideoPath(input?.value || editingDemoVideoPath);
+  if(path){
+    const url=demoVideoUrl(path);
+    if(v.src!==url)v.src=url;
     v.classList.remove("hidden");
     b.classList.remove("hidden");
   }else{
@@ -1539,69 +1540,16 @@ function updateDemoVideoPreview(){
     b.classList.add("hidden");
   }
 }
-
-$("#productDemoVideo")?.addEventListener("change",e=>{
-  const file=e.target.files?.[0];
-  if(!file)return;
-
-  if(!file.type.startsWith("video/")){
-    e.target.value="";
-    toast("請選擇影片檔");
-    return;
-  }
-  if(file.size>25*1024*1024){
-    e.target.value="";
-    toast("展示影片請控制在 25MB 內");
-    return;
-  }
-
-  pendingDemoVideoFile=file;
-  removeDemoVideoOnSave=false;
-
-  if(demoPreviewObjectUrl)URL.revokeObjectURL(demoPreviewObjectUrl);
-  demoPreviewObjectUrl=URL.createObjectURL(file);
+$("#productDemoVideoPath")?.addEventListener("input",()=>{
+  editingDemoVideoPath=normalizeDemoVideoPath($("#productDemoVideoPath").value);
   updateDemoVideoPreview();
 });
-
 $("#removeDemoVideoBtn")?.addEventListener("click",()=>{
-  pendingDemoVideoFile=null;
-  removeDemoVideoOnSave=true;
-  const input=$("#productDemoVideo");
+  editingDemoVideoPath="";
+  const input=$("#productDemoVideoPath");
   if(input)input.value="";
-  if(demoPreviewObjectUrl){
-    URL.revokeObjectURL(demoPreviewObjectUrl);
-    demoPreviewObjectUrl="";
-  }
   updateDemoVideoPreview();
 });
-
-function safeVideoFileName(name="video.mp4"){
-  return String(name)
-    .replace(/[^a-zA-Z0-9._-]+/g,"_")
-    .slice(-80) || "video.mp4";
-}
-
-async function uploadDemoVideo(file){
-  const extName=safeVideoFileName(file.name);
-  const unique=(crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`);
-  const path=`product-videos/${currentUser.uid}/${unique}-${extName}`;
-  const r=storageRef(storage,path);
-  await uploadBytes(r,file,{
-    contentType:file.type||"video/mp4",
-    cacheControl:"public,max-age=3600"
-  });
-  const url=await getDownloadURL(r);
-  return {url,path};
-}
-
-async function deleteStoredVideo(path){
-  if(!path)return;
-  try{
-    await deleteObject(storageRef(storage,path));
-  }catch(err){
-    if(err?.code!=="storage/object-not-found")throw err;
-  }
-}
 
 $("#productForm").addEventListener("submit", async e=>{
   e.preventDefault();
@@ -1650,51 +1598,18 @@ $("#productForm").addEventListener("submit", async e=>{
       variants,
       imageData:editingImage,
       realImageData:editingRealImage,
+      demoVideoPath:normalizeDemoVideoPath($("#productDemoVideoPath")?.value||editingDemoVideoPath),
       updatedAt:serverTimestamp()
     };
 
-    const oldVideoPath=existingProduct?.demoVideoPath||editingDemoVideoPath||"";
-    let nextVideoUrl=removeDemoVideoOnSave ? "" : (editingDemoVideoUrl||"");
-    let nextVideoPath=removeDemoVideoOnSave ? "" : (editingDemoVideoPath||"");
-    let uploadedNewVideo=null;
-
-    if(pendingDemoVideoFile){
-      $("#productError").textContent="展示影片上傳中…";
-      uploadedNewVideo=await uploadDemoVideo(pendingDemoVideoFile);
-      nextVideoUrl=uploadedNewVideo.url;
-      nextVideoPath=uploadedNewVideo.path;
-    }
-
-    payload.demoVideoUrl=nextVideoUrl;
-    payload.demoVideoPath=nextVideoPath;
-    payload.demoVideoData=deleteField();
-
-    try{
-      if(id){
-        await updateDoc(doc(db,"products",id),payload);
-      }else{
-        await addDoc(collection(db,"products"),{
-          ...payload,
-          sortOrder:-Date.now(),
-          createdAt:serverTimestamp()
-        });
-      }
-    }catch(saveErr){
-      // Firestore 儲存失敗時，把剛上傳的新影片清掉，避免留下孤兒檔案。
-      if(uploadedNewVideo?.path){
-        try{await deleteStoredVideo(uploadedNewVideo.path);}catch{}
-      }
-      throw saveErr;
-    }
-
-    // 商品成功儲存後，若換片或移除影片，再刪掉舊檔。
-    if(oldVideoPath && oldVideoPath!==nextVideoPath){
-      try{
-        await deleteStoredVideo(oldVideoPath);
-      }catch(videoDeleteErr){
-        console.warn("舊展示影片刪除失敗",videoDeleteErr);
-        toast("商品已儲存，但舊影片清理失敗");
-      }
+    if(id){
+      await updateDoc(doc(db,"products",id),payload);
+    }else{
+      await addDoc(collection(db,"products"),{
+        ...payload,
+        sortOrder:-Date.now(),
+        createdAt:serverTimestamp()
+      });
     }
 
     $("#productDialog").close();
@@ -1702,14 +1617,7 @@ $("#productForm").addEventListener("submit", async e=>{
     $("#variantRows").innerHTML="";
     editingImage="";
     editingRealImage="";
-    editingDemoVideoUrl="";
     editingDemoVideoPath="";
-    pendingDemoVideoFile=null;
-    removeDemoVideoOnSave=false;
-    if(demoPreviewObjectUrl){
-      URL.revokeObjectURL(demoPreviewObjectUrl);
-      demoPreviewObjectUrl="";
-    }
     toast("商品已儲存");
   }catch(err){
     console.error(err);
@@ -1725,18 +1633,7 @@ async function deleteProduct(p){
   if(!confirm(`確定刪除「${p.name}」？`))return;
   try{
     await deleteDoc(doc(db,"products",p.id));
-
-    if(p.demoVideoPath){
-      try{
-        await deleteStoredVideo(p.demoVideoPath);
-        toast("商品與展示影片已刪除");
-      }catch(videoErr){
-        console.error(videoErr);
-        toast("商品已刪除，但影片清理失敗");
-      }
-    }else{
-      toast("商品已刪除");
-    }
+    toast("商品已刪除");
   }catch(err){
     alert(err.message||"刪除失敗");
   }
@@ -3524,5 +3421,8 @@ main.wrap{
 </style>
 
 <style>
-#productDemoVideo{max-width:100%}
+#productDemoVideoPath{
+  width:100%;
+  box-sizing:border-box;
+}
 </style>
