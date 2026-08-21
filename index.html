@@ -3539,3 +3539,55 @@ main.wrap{
 }
 </style>
 
+<style>
+/* 展示影片標記：移到商品圖底部正中央 */
+.video-badge{
+  left:50% !important;
+  right:auto !important;
+  bottom:7px !important;
+  transform:translateX(-50%) !important;
+  gap:4px !important;
+  padding:4px 8px !important;
+  font-size:10px !important;
+  white-space:nowrap !important;
+}
+.video-play{
+  font-size:8px !important;
+}
+@media(max-width:600px){
+  .video-badge{
+    left:50% !important;
+    right:auto !important;
+    bottom:6px !important;
+    transform:translateX(-50%) !important;
+    padding:4px 7px !important;
+    font-size:10px !important;
+  }
+}
+</style>
+
+<style>
+/* 展示影片：底部膠囊橫向填滿 */
+.video-badge{
+  left:8px !important;
+  right:8px !important;
+  bottom:7px !important;
+  width:auto !important;
+  transform:none !important;
+  justify-content:center !important;
+  box-sizing:border-box !important;
+  border-radius:999px !important;
+  padding:5px 8px !important;
+  font-size:10px !important;
+}
+@media(max-width:600px){
+  .video-badge{
+    left:6px !important;
+    right:6px !important;
+    bottom:6px !important;
+    transform:none !important;
+    padding:5px 7px !important;
+  }
+}
+</style>
+
