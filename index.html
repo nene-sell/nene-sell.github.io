@@ -1181,7 +1181,10 @@ $("#productCount").textContent=`${list.length} 件商品`;
       : (sold ? "售完" : reserved ? "已預訂" : limit===0 ? "已售完" : `庫存 ${limit}`);
 
     card.innerHTML=`
-      <div class="card-media"><img src="${p.imageData||""}" alt="${esc(p.name)}"></div>
+      <div class="card-media">
+        <img src="${p.imageData||""}" alt="${esc(p.name)}">
+        ${p.demoVideoPath ? `<button type="button" class="video-badge" title="直接看展示影片"><span class="video-play">▶</span><span class="video-label">展示影片</span></button>` : ""}
+      </div>
       <div class="card-body">
         <div class="badge-row"><span class="badge">${esc(p.category)}</span>${isNewActive(p)?`<span class="new-badge">新品</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}${sold?`<span class="sold-badge">售完</span>`:""}</div>
         <div class="card-title">${esc(p.name)}</div>
@@ -1244,6 +1247,14 @@ $("#productCount").textContent=`${list.length} 件商品`;
       cardMedia.onclick=()=>{
         openPhotoLightbox(p);
       };
+      const videoBadge=card.querySelector(".video-badge");
+      if(videoBadge){
+        videoBadge.onclick=(e)=>{
+          e.stopPropagation();
+          openPhotoLightbox(p);
+          showProductPhoto("video");
+        };
+      }
     }
 
     if(isAdmin()){
@@ -3432,3 +3443,99 @@ main.wrap{
   box-sizing:border-box;
 }
 </style>
+
+<style>
+/* 有展示影片的商品：圖片右下角自動顯示小標記 */
+.card-media{position:relative}
+.video-badge{
+  position:absolute;
+  right:8px;
+  bottom:8px;
+  z-index:3;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:5px 8px;
+  border-radius:999px;
+  background:rgba(82,61,49,.82);
+  color:#fff8f2;
+  border:1px solid rgba(255,248,242,.28);
+  font-size:11px;
+  font-weight:800;
+  line-height:1;
+  pointer-events:none;
+  backdrop-filter:blur(3px);
+  -webkit-backdrop-filter:blur(3px);
+  box-shadow:0 2px 7px rgba(61,43,33,.16);
+}
+.video-play{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:9px;
+}
+@media(max-width:600px){
+  .video-badge{
+    right:6px;
+    bottom:6px;
+    padding:5px 7px;
+    font-size:10px;
+  }
+}
+</style>
+
+<style>
+/* 展示影片標記縮小版 */
+.video-badge{
+  right:6px !important;
+  bottom:6px !important;
+  gap:3px !important;
+  padding:3px 6px !important;
+  font-size:9px !important;
+}
+.video-play{
+  font-size:7px !important;
+}
+@media(max-width:600px){
+  .video-badge{
+    right:5px !important;
+    bottom:5px !important;
+    padding:3px 5px !important;
+    font-size:9px !important;
+  }
+}
+</style>
+
+<style>
+.video-badge{
+  pointer-events:auto !important;
+  cursor:pointer !important;
+  font-family:inherit;
+}
+.video-badge:hover{
+  background:rgba(82,61,49,.94) !important;
+}
+</style>
+
+<style>
+/* 展示影片標記：比上一版稍微放大 */
+.video-badge{
+  right:6px !important;
+  bottom:6px !important;
+  gap:4px !important;
+  padding:4px 7px !important;
+  font-size:10px !important;
+}
+.video-play{
+  font-size:8px !important;
+}
+@media(max-width:600px){
+  .video-badge{
+    right:5px !important;
+    bottom:5px !important;
+    padding:4px 7px !important;
+    font-size:10px !important;
+  }
+}
+</style>
+
