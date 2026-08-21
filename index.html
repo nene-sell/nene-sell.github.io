@@ -991,6 +991,34 @@ function showProductPhoto(kind="product"){
   $$("#photoTabs .photo-tab").forEach(btn=>{
     btn.classList.toggle("active",btn.dataset.photoKind===(useReal?"real":"product"));
   });
+  $$("#variantThumbs .variant-thumb").forEach(x=>x.classList.remove("active"));
+}
+
+function renderVariantThumbs(p){
+  const wrap=$("#variantThumbs");
+  if(!wrap)return;
+  const vars=getVariants(p).filter(v=>v.imageData);
+  wrap.innerHTML="";
+  if(!vars.length){
+    wrap.classList.add("hidden");
+    return;
+  }
+  wrap.classList.remove("hidden");
+  vars.forEach(v=>{
+    const btn=document.createElement("button");
+    btn.type="button";
+    btn.className="variant-thumb";
+    btn.title=v.name||"款式";
+    btn.innerHTML=`<img src="${v.imageData}" alt="${esc(v.name||"款式")}"><span>${esc(v.name||"款式")}</span>`;
+    btn.onclick=()=>{
+      $("#photoLightboxImage").src=v.imageData;
+      $("#photoLightboxTitle").textContent=`${p.name||"商品圖片"}${v.name?`｜${v.name}`:""}`;
+      $$("#photoTabs .photo-tab").forEach(x=>x.classList.remove("active"));
+      $$("#variantThumbs .variant-thumb").forEach(x=>x.classList.remove("active"));
+      btn.classList.add("active");
+    };
+    wrap.appendChild(btn);
+  });
 }
 
 function openPhotoLightbox(p){
@@ -998,6 +1026,7 @@ function openPhotoLightbox(p){
   lightboxProduct=p;
   const realBtn=$("#photoTabs .photo-tab[data-photo-kind='real']");
   realBtn.classList.toggle("hidden",!p.realImageData);
+  renderVariantThumbs(p);
   showProductPhoto(p.realImageData ? "real" : "product");
   $("#photoLightbox").showModal();
 }
@@ -1120,7 +1149,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
       : (sold ? "售完" : reserved ? "已預訂" : limit===0 ? "已售完" : `庫存 ${limit}`);
 
     card.innerHTML=`
-      <div class="card-media"><img src="${(variants.find(v=>v.name===defaultVariant)?.imageData)||p.imageData||""}" alt="${esc(p.name)}"></div>
+      <div class="card-media"><img src="${p.imageData||""}" alt="${esc(p.name)}"></div>
       <div class="card-body">
         <div class="badge-row"><span class="badge">${esc(p.category)}</span>${isNewActive(p)?`<span class="new-badge">新品</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}${sold?`<span class="sold-badge">售完</span>`:""}</div>
         <div class="card-title">${esc(p.name)}</div>
@@ -1181,9 +1210,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
     if(cardMedia && p.imageData){
       cardMedia.title=p.realImageData ? "點擊查看商品圖 / 實體圖" : "點擊查看大圖";
       cardMedia.onclick=()=>{
-        const selectedName=card.querySelector(".variant-select")?.value||defaultVariant;
-        const selectedVariant=variants.find(v=>v.name===selectedName);
-        openPhotoLightbox(selectedVariant?.imageData ? {...p,imageData:selectedVariant.imageData} : p);
+        openPhotoLightbox(p);
       };
     }
 
@@ -1266,9 +1293,6 @@ $("#productCount").textContent=`${list.length} 件商品`;
         variantSelect.onchange=()=>{
           const lim=variantStock(p,variantSelect.value);
           qtyInput.max=lim; qtyInput.value=1; qtyInput.disabled=lim===0; addBtn.disabled=lim===0;
-          const selectedVariant=variants.find(v=>v.name===variantSelect.value);
-          const img=card.querySelector(".card-media img");
-          if(img) img.src=selectedVariant?.imageData||p.imageData||"";
         };
       }
       if(addBtn)addBtn.onclick=()=>{
@@ -1721,6 +1745,7 @@ onSnapshot(
       
       <button class="photo-tab active" data-photo-kind="real" type="button">實體圖</button>
     </div>
+    <div id="variantThumbs" class="variant-thumbs hidden"></div>
   </div>
 </dialog>
 
@@ -3263,5 +3288,50 @@ main.wrap{
   color:#b9a18e;
   opacity:.9;
   white-space:nowrap;
+}
+</style>
+
+<style>
+.variant-thumbs{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:center;
+  margin-top:12px;
+}
+.variant-thumbs.hidden{display:none !important}
+.variant-thumb{
+  width:72px;
+  border:1px solid #c9b3a2;
+  border-radius:10px;
+  padding:5px;
+  background:#f2e5da;
+  color:#5a473c;
+  cursor:pointer;
+}
+.variant-thumb img{
+  width:100%;
+  aspect-ratio:1/1;
+  object-fit:cover;
+  display:block;
+  border-radius:7px;
+  background:#fffaf6;
+}
+.variant-thumb span{
+  display:block;
+  margin-top:4px;
+  font-size:10px;
+  font-weight:800;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.variant-thumb.active{
+  border-color:#8e684f;
+  box-shadow:0 0 0 2px rgba(142,104,79,.15);
+}
+@media(max-width:600px){
+  .variant-thumb{width:60px;padding:4px}
+  .variant-thumb span{font-size:9px}
 }
 </style>
