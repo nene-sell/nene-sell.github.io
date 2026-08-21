@@ -609,6 +609,15 @@ dialog input:focus,dialog select:focus{border-color:#666}
   </div>
   <div class="hint">有上傳實體圖時，買家點商品圖會直接開啟實體圖，仍可切換查看商品圖。</div>
 </div>
+<div class="field real-photo-field">
+  <label>展示影片（選填）</label>
+  <input id="productDemoVideo" type="file" accept="video/mp4,video/webm,video/quicktime">
+  <div class="real-photo-actions">
+    <video id="demoVideoPreview" class="real-photo-preview hidden" muted loop playsinline controls></video>
+    <button id="removeDemoVideoBtn" class="btn hidden" type="button">移除展示影片</button>
+  </div>
+  <div class="hint">建議錄製 3～10 秒、8MB 內。首頁仍固定顯示商品圖，點進去才會看到展示影片。</div>
+</div>
 
     </div>
 
@@ -706,6 +715,7 @@ let activeGroup = "";
 let currentUser = null;
 let editingImage = "";
 let editingRealImage = "";
+let editingDemoVideo = "";
 let cart = [];
 let offerCart = [];
 
@@ -985,12 +995,23 @@ function showProductPhoto(kind="product"){
   if(!lightboxProduct)return;
   const productImg=lightboxProduct.imageData||"";
   const realImg=lightboxProduct.realImageData||"";
-  const useReal=kind==="real" && realImg;
-  $("#photoLightboxImage").src=useReal ? realImg : productImg;
-  $("#photoLightboxTitle").textContent=lightboxProduct.name||"商品圖片";
-  $$("#photoTabs .photo-tab").forEach(btn=>{
-    btn.classList.toggle("active",btn.dataset.photoKind===(useReal?"real":"product"));
-  });
+  const video=lightboxProduct.demoVideoData||"";
+  const img=$("#photoLightboxImage"), vid=$("#photoLightboxVideo");
+  if(kind==="video" && video){
+    img.classList.add("hidden");
+    vid.classList.remove("hidden");
+    if(vid.src!==video)vid.src=video;
+    $("#photoLightboxTitle").textContent=`${lightboxProduct.name||"商品"}｜展示影片`;
+    vid.play().catch(()=>{});
+  }else{
+    vid.pause(); vid.classList.add("hidden");
+    img.classList.remove("hidden");
+    const useReal=kind==="real" && realImg;
+    img.src=useReal?realImg:productImg;
+    $("#photoLightboxTitle").textContent=lightboxProduct.name||"商品圖片";
+    kind=useReal?"real":"product";
+  }
+  $$("#photoTabs .photo-tab").forEach(btn=>btn.classList.toggle("active",btn.dataset.photoKind===kind));
   $$("#variantThumbs .variant-thumb").forEach(x=>x.classList.remove("active"));
 }
 
@@ -1011,6 +1032,9 @@ function renderVariantThumbs(p){
     btn.title=v.name||"款式";
     btn.innerHTML=`<img src="${v.imageData}" alt="${esc(v.name||"款式")}"><span>${esc(v.name||"款式")}</span>`;
     btn.onclick=()=>{
+      const vid=$("#photoLightboxVideo");
+      vid.pause(); vid.classList.add("hidden");
+      $("#photoLightboxImage").classList.remove("hidden");
       $("#photoLightboxImage").src=v.imageData;
       $("#photoLightboxTitle").textContent=`${p.name||"商品圖片"}${v.name?`｜${v.name}`:""}`;
       $$("#photoTabs .photo-tab").forEach(x=>x.classList.remove("active"));
@@ -1026,6 +1050,8 @@ function openPhotoLightbox(p){
   lightboxProduct=p;
   const realBtn=$("#photoTabs .photo-tab[data-photo-kind='real']");
   realBtn.classList.toggle("hidden",!p.realImageData);
+  const videoBtn=$("#photoTabs .photo-tab[data-photo-kind='video']");
+  videoBtn.classList.toggle("hidden",!p.demoVideoData);
   renderVariantThumbs(p);
   showProductPhoto(p.realImageData ? "real" : "product");
   $("#photoLightbox").showModal();
@@ -1411,6 +1437,8 @@ function openProduct(p=null){
   $("#productImage").value="";
   editingImage=p?.imageData||"";
   editingRealImage=p?.realImageData||"";
+  editingDemoVideo=p?.demoVideoData||"";
+  updateDemoVideoPreview();
   $("#productRealImage").value="";
   if(editingRealImage){
     $("#realPreview").src=editingRealImage;
@@ -1478,6 +1506,44 @@ $("#removeRealImageBtn").onclick=()=>{
   $("#removeRealImageBtn").classList.add("hidden");
 };
 
+
+function updateDemoVideoPreview(){
+  const v=$("#demoVideoPreview"), b=$("#removeDemoVideoBtn");
+  if(!v||!b)return;
+  if(editingDemoVideo){
+    v.src=editingDemoVideo;
+    v.classList.remove("hidden");
+    b.classList.remove("hidden");
+  }else{
+    v.pause();
+    v.removeAttribute("src");
+    v.load();
+    v.classList.add("hidden");
+    b.classList.add("hidden");
+  }
+}
+$("#productDemoVideo")?.addEventListener("change",async e=>{
+  const file=e.target.files?.[0];
+  if(!file)return;
+  if(file.size>8*1024*1024){
+    e.target.value="";
+    toast("展示影片請控制在 8MB 內");
+    return;
+  }
+  editingDemoVideo=await new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>resolve(r.result||"");
+    r.onerror=reject;
+    r.readAsDataURL(file);
+  });
+  updateDemoVideoPreview();
+});
+$("#removeDemoVideoBtn")?.addEventListener("click",()=>{
+  editingDemoVideo="";
+  const input=$("#productDemoVideo"); if(input)input.value="";
+  updateDemoVideoPreview();
+});
+
 $("#productForm").addEventListener("submit", async e=>{
   e.preventDefault();
   if(!isAdmin()){
@@ -1525,6 +1591,7 @@ $("#productForm").addEventListener("submit", async e=>{
       variants,
       imageData:editingImage,
       realImageData:editingRealImage,
+      demoVideoData:editingDemoVideo,
       updatedAt:serverTimestamp()
     };
 
@@ -1542,6 +1609,8 @@ $("#productForm").addEventListener("submit", async e=>{
     $("#productForm").reset();
     $("#variantRows").innerHTML="";
     editingImage="";
+    editingRealImage="";
+    editingDemoVideo="";
     toast("商品已儲存");
   }catch(err){
     console.error(err);
@@ -1740,11 +1809,13 @@ onSnapshot(
     </div>
     <div class="photo-stage">
       <img id="photoLightboxImage" alt="商品大圖">
+<video id="photoLightboxVideo" class="photo-demo-video hidden" muted loop playsinline controls></video>
     </div>
     <div id="photoTabs" class="photo-tabs">
       
       <button class="photo-tab active" data-photo-kind="real" type="button">實體圖</button>
-    </div>
+    
+<button type="button" class="photo-tab hidden" data-photo-kind="video">展示影片</button></div>
     <div id="variantThumbs" class="variant-thumbs hidden"></div>
   </div>
 </dialog>
@@ -3334,4 +3405,10 @@ main.wrap{
   .variant-thumb{width:60px;padding:4px}
   .variant-thumb span{font-size:9px}
 }
+</style>
+
+<style>
+.photo-demo-video{width:100%;max-height:min(70vh,720px);object-fit:contain;background:#1f1814;border-radius:12px}
+.photo-demo-video.hidden{display:none!important}
+#demoVideoPreview{width:150px;height:110px;object-fit:contain;background:#efe5dc}
 </style>
