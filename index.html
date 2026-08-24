@@ -514,6 +514,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
   <section class="toolbar">
     <input id="searchInput" class="search" placeholder="搜尋商品名稱…">
     <button id="addBtn" class="btn primary hidden">＋ 新增商品</button>
+    <button id="catalogImageBtn" class="btn hidden" type="button">📷 產生商品總圖</button>
     <span id="status" style="display:none!important"></span>
 </section>
 
@@ -1351,8 +1352,186 @@ $("#productCount").textContent=`${list.length} 件商品`;
   });
 
   $("#addBtn").classList.toggle("hidden", !isAdmin());
+  $("#catalogImageBtn")?.classList.toggle("hidden", !isAdmin());
   $("#adminBtn").textContent=isAdmin() ? "管理員登出" : "管理員登入";
   updateCartFab();
+}
+
+
+async function loadCatalogImage(src){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>resolve(img);
+    img.onerror=reject;
+    img.src=src;
+  });
+}
+
+function catalogRoundRect(ctx,x,y,w,h,r){
+  const rr=Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr,y);
+  ctx.arcTo(x+w,y,x+w,y+h,rr);
+  ctx.arcTo(x+w,y+h,x,y+h,rr);
+  ctx.arcTo(x,y+h,x,y,rr);
+  ctx.arcTo(x,y,x+w,y,rr);
+  ctx.closePath();
+}
+
+function catalogFitText(ctx,text,maxWidth){
+  let s=String(text||"");
+  if(ctx.measureText(s).width<=maxWidth)return s;
+  while(s.length>1 && ctx.measureText(s+"…").width>maxWidth)s=s.slice(0,-1);
+  return s+"…";
+}
+
+async function generateProductCatalogImage(){
+  if(!isAdmin())return;
+
+  const btn=$("#catalogImageBtn");
+  try{
+    btn.disabled=true;
+    btn.textContent="產生中…";
+
+    const categoryOrder=["家具","玩偶","花盆","戒指","作物","寵物"];
+    const saleProducts=products.filter(p=>{
+      if(p.category==="收購區")return false;
+      const sold=p.status==="sold" || getStock(p)<=0;
+      if(sold || p.status==="reserved")return false;
+      return !!p.imageData;
+    });
+
+    const orderValue=(p)=>{
+      if(Number.isFinite(Number(p?.sortOrder)))return Number(p.sortOrder);
+      return -((p?.createdAt?.seconds||0)*1000);
+    };
+
+    const groups=[];
+    for(const groupName of categoryOrder){
+      const items=saleProducts
+        .filter(p=>{
+          const c=String(p.category||"");
+          if(groupName==="戒指")return c.startsWith("戒指");
+          if(groupName==="作物")return c.startsWith("作物");
+          return c===groupName;
+        })
+        .sort((a,b)=>orderValue(a)-orderValue(b));
+      if(items.length)groups.push({name:groupName,items});
+    }
+
+    if(!groups.length){
+      toast("目前沒有可產生的販售商品");
+      return;
+    }
+
+    const W=1400;
+    const cols=4;
+    const side=44;
+    const gap=22;
+    const cardW=Math.floor((W-side*2-gap*(cols-1))/cols);
+    const imageH=cardW;
+    const cardH=imageH+104;
+    const topH=118;
+    const groupTitleH=64;
+    const groupGap=30;
+
+    let H=topH;
+    groups.forEach(g=>{
+      const rows=Math.ceil(g.items.length/cols);
+      H+=groupTitleH + rows*cardH + Math.max(0,rows-1)*gap + groupGap;
+    });
+    H+=24;
+
+    const canvas=document.createElement("canvas");
+    canvas.width=W;
+    canvas.height=H;
+    const ctx=canvas.getContext("2d");
+
+    ctx.fillStyle="#f4ece5";
+    ctx.fillRect(0,0,W,H);
+
+    ctx.textAlign="center";
+    ctx.fillStyle="#4b3b32";
+    ctx.font='700 34px Arial,"Microsoft JhengHei",sans-serif';
+    ctx.fillText("商品一覽",W/2,50);
+    ctx.fillStyle="#8a7467";
+    ctx.font='18px Arial,"Microsoft JhengHei",sans-serif';
+    ctx.fillText("Product Catalog",W/2,80);
+
+    let y=topH;
+    for(const group of groups){
+      ctx.textAlign="left";
+      ctx.fillStyle="#5c493e";
+      ctx.font='700 27px Arial,"Microsoft JhengHei",sans-serif';
+      ctx.fillText(group.name,side,y+34);
+
+      ctx.strokeStyle="#ccb8aa";
+      ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(side,y+49);
+      ctx.lineTo(W-side,y+49);
+      ctx.stroke();
+
+      y+=groupTitleH;
+
+      for(let i=0;i<group.items.length;i++){
+        const p=group.items[i];
+        const col=i%cols;
+        const row=Math.floor(i/cols);
+        const x=side+col*(cardW+gap);
+        const cy=y+row*(cardH+gap);
+
+        ctx.fillStyle="#fffaf6";
+        catalogRoundRect(ctx,x,cy,cardW,cardH,14);
+        ctx.fill();
+        ctx.strokeStyle="#d8c8bd";
+        ctx.stroke();
+
+        try{
+          const img=await loadCatalogImage(p.imageData);
+          const scale=Math.min(cardW/img.width,imageH/img.height);
+          const dw=img.width*scale;
+          const dh=img.height*scale;
+          const dx=x+(cardW-dw)/2;
+          const dy=cy+(imageH-dh)/2;
+
+          ctx.save();
+          catalogRoundRect(ctx,x,cy,cardW,imageH,14);
+          ctx.clip();
+          ctx.fillStyle="#eee2d8";
+          ctx.fillRect(x,cy,cardW,imageH);
+          ctx.drawImage(img,dx,dy,dw,dh);
+          ctx.restore();
+        }catch{}
+
+        ctx.textAlign="center";
+        ctx.fillStyle="#493a32";
+        ctx.font='700 19px Arial,"Microsoft JhengHei",sans-serif';
+        ctx.fillText(catalogFitText(ctx,p.name,cardW-24),x+cardW/2,cy+imageH+34);
+
+        ctx.fillStyle="#b66f59";
+        ctx.font='700 21px Arial,"Microsoft JhengHei",sans-serif';
+        ctx.fillText(catalogFitText(ctx,p.price,cardW-24),x+cardW/2,cy+imageH+72);
+      }
+
+      const rows=Math.ceil(group.items.length/cols);
+      y+=rows*cardH+Math.max(0,rows-1)*gap+groupGap;
+    }
+
+    const link=document.createElement("a");
+    link.download=`商品總圖-${new Date().toISOString().slice(0,10)}.jpg`;
+    link.href=canvas.toDataURL("image/jpeg",0.92);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    toast("商品總圖已產生 ♡");
+  }catch(err){
+    console.error(err);
+    toast("商品總圖產生失敗");
+  }finally{
+    btn.disabled=false;
+    btn.textContent="📷 產生商品總圖";
+  }
 }
 
 async function compressImage(file){
@@ -1695,6 +1874,7 @@ onAuthStateChanged(auth,user=>{
 });
 
 $("#addBtn").onclick=()=>openProduct();
+$("#catalogImageBtn").onclick=generateProductCatalogImage;
 $("#searchInput").oninput=render;
 
 function closeCategoryMenus(except=null){
@@ -3593,3 +3773,10 @@ main.wrap{
 </style>
 
 
+
+<style>
+#catalogImageBtn{white-space:nowrap}
+@media(max-width:560px){
+  #catalogImageBtn{font-size:11px!important;padding:8px 10px!important}
+}
+</style>
