@@ -1393,7 +1393,16 @@ async function generateProductCatalogImage(){
     btn.disabled=true;
     btn.textContent="產生中…";
 
-    const categoryOrder=["家具","玩偶","花盆","戒指","作物","寵物"];
+    const categoryOrder=[
+      {key:"家具",label:"Furniture"},
+      {key:"玩偶",label:"Dolls"},
+      {key:"花盆",label:"Planters"},
+      {key:"戒指限男",label:"戒指 · Male"},
+      {key:"戒指限女",label:"戒指 · Female"},
+      {key:"作物限男",label:"作物 · Male"},
+      {key:"作物限女",label:"作物 · Female"},
+      {key:"寵物",label:"Pets"}
+    ];
     const saleProducts=products.filter(p=>{
       if(p.category==="收購區")return false;
       const sold=p.status==="sold" || getStock(p)<=0;
@@ -1407,16 +1416,11 @@ async function generateProductCatalogImage(){
     };
 
     const groups=[];
-    for(const groupName of categoryOrder){
+    for(const group of categoryOrder){
       const items=saleProducts
-        .filter(p=>{
-          const c=String(p.category||"");
-          if(groupName==="戒指")return c.startsWith("戒指");
-          if(groupName==="作物")return c.startsWith("作物");
-          return c===groupName;
-        })
+        .filter(p=>String(p.category||"")===group.key)
         .sort((a,b)=>orderValue(a)-orderValue(b));
-      if(items.length)groups.push({name:groupName,items});
+      if(items.length)groups.push({name:group.label,items});
     }
 
     if(!groups.length){
@@ -1453,10 +1457,10 @@ async function generateProductCatalogImage(){
     ctx.textAlign="center";
     ctx.fillStyle="#4b3b32";
     ctx.font='700 34px Arial,"Microsoft JhengHei",sans-serif';
-    ctx.fillText("商品一覽",W/2,50);
+    ctx.fillText("販售清單",W/2,50);
     ctx.fillStyle="#8a7467";
     ctx.font='18px Arial,"Microsoft JhengHei",sans-serif';
-    ctx.fillText("Product Catalog",W/2,80);
+    ctx.fillText("Sale List",W/2,80);
 
     let y=topH;
     for(const group of groups){
