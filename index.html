@@ -1429,7 +1429,7 @@ async function generateProductCatalogImage(){
     }
 
     const W=1400;
-    const EXPORT_SCALE=4;
+    const EXPORT_SCALE=2.5;
     const cols=8;
     const side=44;
     const gap=22;
@@ -1557,8 +1557,8 @@ async function generateProductCatalogImage(){
     }
 
     const link=document.createElement("a");
-    link.download=`商品總圖-${new Date().toISOString().slice(0,10)}.png`;
-    link.href=canvas.toDataURL("image/png");
+    link.download=`商品總圖-${new Date().toISOString().slice(0,10)}.webp`;
+    link.href=canvas.toDataURL("image/webp",0.92);
     document.body.appendChild(link);
     link.click();
     link.remove();
