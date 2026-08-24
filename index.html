@@ -1530,7 +1530,9 @@ async function generateProductCatalogImage(){
 
         ctx.fillStyle="#b66f59";
         ctx.font='700 13px Arial,"Microsoft JhengHei",sans-serif';
-        ctx.fillText(catalogFitText(ctx,p.price,cardW-10),x+cardW/2,cy+imageH+53);
+        const catalogStock=getStock(p);
+        const stockSuffix=catalogStock>=2 ? `  ×${catalogStock}` : "";
+        ctx.fillText(catalogFitText(ctx,`${p.price}${stockSuffix}`,cardW-10),x+cardW/2,cy+imageH+53);
       }
 
       const rows=Math.ceil(group.items.length/cols);
@@ -1538,8 +1540,8 @@ async function generateProductCatalogImage(){
     }
 
     const link=document.createElement("a");
-    link.download=`商品總圖-${new Date().toISOString().slice(0,10)}.jpg`;
-    link.href=canvas.toDataURL("image/jpeg",1.0);
+    link.download=`商品總圖-${new Date().toISOString().slice(0,10)}.png`;
+    link.href=canvas.toDataURL("image/png");
     document.body.appendChild(link);
     link.click();
     link.remove();
