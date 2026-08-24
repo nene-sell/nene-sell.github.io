@@ -1394,14 +1394,14 @@ async function generateProductCatalogImage(){
     btn.textContent="產生中…";
 
     const categoryOrder=[
-      {key:"家具",label:"Furniture"},
-      {key:"玩偶",label:"Dolls"},
-      {key:"花盆",label:"Planters"},
+      {key:"家具",label:"家具"},
+      {key:"玩偶",label:"玩偶"},
+      {key:"花盆",label:"花盆"},
       {key:"戒指限男",label:"戒指 · Male"},
       {key:"戒指限女",label:"戒指 · Female"},
       {key:"作物限男",label:"作物 · Male"},
       {key:"作物限女",label:"作物 · Female"},
-      {key:"寵物",label:"Pets"}
+      {key:"寵物",label:"寵物"}
     ];
     const saleProducts=products.filter(p=>{
       if(p.category==="收購區")return false;
@@ -1429,6 +1429,7 @@ async function generateProductCatalogImage(){
     }
 
     const W=1400;
+    const EXPORT_SCALE=2;
     const cols=10;
     const side=44;
     const gap=22;
@@ -1436,7 +1437,7 @@ async function generateProductCatalogImage(){
     const imageH=cardW;
     const cardH=imageH+82;
     const topH=118;
-    const groupTitleH=64;
+    const groupTitleH=82;
     const groupGap=30;
 
     let H=topH;
@@ -1447,9 +1448,12 @@ async function generateProductCatalogImage(){
     H+=24;
 
     const canvas=document.createElement("canvas");
-    canvas.width=W;
-    canvas.height=H;
+    canvas.width=W*EXPORT_SCALE;
+    canvas.height=H*EXPORT_SCALE;
     const ctx=canvas.getContext("2d");
+    ctx.scale(EXPORT_SCALE,EXPORT_SCALE);
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality="high";
 
     ctx.fillStyle="#f4ece5";
     ctx.fillRect(0,0,W,H);
@@ -1470,21 +1474,21 @@ async function generateProductCatalogImage(){
       ctx.fillText(group.name,side,y+34);
 
       if(group.name.startsWith("戒指")){
-        ctx.font='600 14px Arial,"Microsoft JhengHei",sans-serif';
+        ctx.font='600 13px Arial,"Microsoft JhengHei",sans-serif';
         ctx.fillStyle="#8a7467";
-        ctx.fillText("Couple Lv.10 provided by buyer. Candy first, ring after.",side+155,y+34);
+        ctx.fillText("Couple Lv.10 provided by buyer. Candy first, ring after.",side,y+55);
       }
       if(group.name.startsWith("作物")){
-        ctx.font='600 14px Arial,"Microsoft JhengHei",sans-serif';
+        ctx.font='600 13px Arial,"Microsoft JhengHei",sans-serif';
         ctx.fillStyle="#8a7467";
-        ctx.fillText("Candy first, planting after.",side+155,y+34);
+        ctx.fillText("Candy first, planting after.",side,y+55);
       }
 
       ctx.strokeStyle="#ccb8aa";
       ctx.lineWidth=1;
       ctx.beginPath();
-      ctx.moveTo(side,y+49);
-      ctx.lineTo(W-side,y+49);
+      ctx.moveTo(side,y+70);
+      ctx.lineTo(W-side,y+70);
       ctx.stroke();
 
       y+=groupTitleH;
@@ -1535,7 +1539,7 @@ async function generateProductCatalogImage(){
 
     const link=document.createElement("a");
     link.download=`商品總圖-${new Date().toISOString().slice(0,10)}.jpg`;
-    link.href=canvas.toDataURL("image/jpeg",0.92);
+    link.href=canvas.toDataURL("image/jpeg",1.0);
     document.body.appendChild(link);
     link.click();
     link.remove();
