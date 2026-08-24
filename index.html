@@ -1469,6 +1469,17 @@ async function generateProductCatalogImage(){
       ctx.font='700 27px Arial,"Microsoft JhengHei",sans-serif';
       ctx.fillText(group.name,side,y+34);
 
+      if(group.name.startsWith("戒指")){
+        ctx.font='600 14px Arial,"Microsoft JhengHei",sans-serif';
+        ctx.fillStyle="#8a7467";
+        ctx.fillText("Couple Lv.10 provided by buyer. Candy first, ring after.",side+155,y+34);
+      }
+      if(group.name.startsWith("作物")){
+        ctx.font='600 14px Arial,"Microsoft JhengHei",sans-serif';
+        ctx.fillStyle="#8a7467";
+        ctx.fillText("Candy first, planting after.",side+155,y+34);
+      }
+
       ctx.strokeStyle="#ccb8aa";
       ctx.lineWidth=1;
       ctx.beginPath();
