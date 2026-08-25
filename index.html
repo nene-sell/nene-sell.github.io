@@ -1385,6 +1385,37 @@ function catalogFitText(ctx,text,maxWidth){
   return s+"…";
 }
 
+
+function catalogVariantRows(p){
+  const raw = Array.isArray(p?.variants) ? p.variants :
+              Array.isArray(p?.styles) ? p.styles :
+              Array.isArray(p?.options) ? p.options : [];
+  return raw.map(v=>{
+    if(typeof v==="string") return {name:v,qty:null};
+    const name=String(v?.name ?? v?.label ?? v?.title ?? v?.variant ?? "").trim();
+    const q=Number(v?.stock ?? v?.qty ?? v?.quantity);
+    return {name,qty:Number.isFinite(q)?q:null};
+  }).filter(v=>v.name);
+}
+
+function catalogWrapVariantLines(ctx, rows, maxWidth){
+  if(!rows.length)return [];
+  const parts=rows.map(v=>v.qty===null ? v.name : `${v.name} ×${v.qty}`);
+  const lines=[];
+  let line="";
+  for(const part of parts){
+    const next=line ? `${line}　${part}` : part;
+    if(line && ctx.measureText(next).width>maxWidth){
+      lines.push(line);
+      line=part;
+    }else{
+      line=next;
+    }
+  }
+  if(line)lines.push(line);
+  return lines;
+}
+
 async function generateProductCatalogImage(){
   if(!isAdmin())return;
 
@@ -1466,16 +1497,29 @@ async function generateProductCatalogImage(){
     const gap=6;
     const cardW=Math.floor((W-side*2-gap*(cols-1))/cols);
     const imageH=cardW;
-    const cardH=imageH+54;
+    const baseCardH=imageH+54;
+    const variantLineH=17;
     const topH=105;
     const sectionTitleH=58;
     const sectionGap=16;
 
     async function exportOne(group){
+      const measureCanvas=document.createElement("canvas");
+      const ctxMeasure=measureCanvas.getContext("2d");
       let H=topH;
       group.sections.forEach(sec=>{
-        const rows=Math.ceil(sec.items.length/cols);
-        H+=sectionTitleH + rows*cardH + Math.max(0,rows-1)*gap + sectionGap;
+        let sectionCardsH=0;
+        for(let r=0;r<Math.ceil(sec.items.length/cols);r++){
+          const rowItems=sec.items.slice(r*cols,(r+1)*cols);
+          let rowH=baseCardH;
+          ctxMeasure.font='600 12px Arial,"Microsoft JhengHei",sans-serif';
+          for(const item of rowItems){
+            const lines=catalogWrapVariantLines(ctxMeasure,catalogVariantRows(item),cardW-12);
+            rowH=Math.max(rowH,baseCardH+lines.length*variantLineH);
+          }
+          sectionCardsH+=rowH+(r?gap:0);
+        }
+        H+=sectionTitleH + sectionCardsH + sectionGap;
       });
       H+=18;
 
@@ -1522,67 +1566,84 @@ async function generateProductCatalogImage(){
 
         y+=sectionTitleH;
 
-        for(let i=0;i<sec.items.length;i++){
-          const p=sec.items[i];
-          const col=i%cols;
-          const row=Math.floor(i/cols);
-          const x=side+col*(cardW+gap);
-          const cy=y+row*(cardH+gap);
+        for(let r=0;r<Math.ceil(sec.items.length/cols);r++){
+          const rowItems=sec.items.slice(r*cols,(r+1)*cols);
+          ctx.font='600 12px Arial,"Microsoft JhengHei",sans-serif';
+          const variantLinesByItem=rowItems.map(p=>
+            catalogWrapVariantLines(ctx,catalogVariantRows(p),cardW-12)
+          );
+          const maxVariantLines=Math.max(0,...variantLinesByItem.map(v=>v.length));
+          const rowH=baseCardH+maxVariantLines*variantLineH;
 
-          ctx.fillStyle="#fffaf6";
-          catalogRoundRect(ctx,x,cy,cardW,cardH,7);
-          ctx.fill();
-          ctx.strokeStyle="#d8c8bd";
-          ctx.stroke();
+          for(let col=0;col<rowItems.length;col++){
+            const p=rowItems[col];
+            const variantLines=variantLinesByItem[col];
+            const x=side+col*(cardW+gap);
+            const cy=y;
 
-          try{
-            const img=await loadCatalogImage(p.imageData);
-            const scale=Math.min(cardW/img.width,imageH/img.height);
-            const dw=img.width*scale;
-            const dh=img.height*scale;
-            const dx=x+(cardW-dw)/2;
-            const dy=cy+(imageH-dh)/2;
+            ctx.fillStyle="#fffaf6";
+            catalogRoundRect(ctx,x,cy,cardW,rowH,7);
+            ctx.fill();
+            ctx.strokeStyle="#d8c8bd";
+            ctx.stroke();
 
-            ctx.save();
-            catalogRoundRect(ctx,x,cy,cardW,imageH,7);
-            ctx.clip();
-            ctx.fillStyle="#eee2d8";
-            ctx.fillRect(x,cy,cardW,imageH);
-            ctx.drawImage(img,dx,dy,dw,dh);
-            ctx.restore();
-          }catch{}
+            try{
+              const img=await loadCatalogImage(p.imageData);
+              const scale=Math.min(cardW/img.width,imageH/img.height);
+              const dw=img.width*scale;
+              const dh=img.height*scale;
+              const dx=x+(cardW-dw)/2;
+              const dy=cy+(imageH-dh)/2;
 
-          ctx.textAlign="center";
-          ctx.fillStyle="#493a32";
-          ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
-          ctx.fillText(catalogFitText(ctx,p.name,cardW-10),x+cardW/2,cy+imageH+20);
+              ctx.save();
+              catalogRoundRect(ctx,x,cy,cardW,imageH,7);
+              ctx.clip();
+              ctx.fillStyle="#eee2d8";
+              ctx.fillRect(x,cy,cardW,imageH);
+              ctx.drawImage(img,dx,dy,dw,dh);
+              ctx.restore();
+            }catch{}
 
-          const catalogStock=getStock(p);
-          const priceText=String(p.price||"");
-          const stockText=`×${catalogStock}`;
+            ctx.textAlign="center";
+            ctx.fillStyle="#493a32";
+            ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
+            ctx.fillText(catalogFitText(ctx,p.name,cardW-10),x+cardW/2,cy+imageH+20);
 
-          ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
-          const priceW=ctx.measureText(priceText).width;
-          ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
-          const stockW=ctx.measureText(stockText).width;
-          const spacing=8;
-          const totalW=priceW+spacing+stockW;
-          let tx=x+(cardW-totalW)/2;
+            const catalogStock=getStock(p);
+            const priceText=String(p.price||"");
+            const stockText=`×${catalogStock}`;
 
-          ctx.textAlign="left";
-          ctx.fillStyle="#b66f59";
-          ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
-          ctx.fillText(priceText,tx,cy+imageH+44);
-          tx+=priceW+spacing;
+            ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
+            const priceW=ctx.measureText(priceText).width;
+            ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
+            const stockW=ctx.measureText(stockText).width;
+            const spacing=8;
+            const totalW=priceW+spacing+stockW;
+            let tx=x+(cardW-totalW)/2;
 
-          ctx.fillStyle="#75665e";
-          ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
-          ctx.fillText(stockText,tx,cy+imageH+44);
-          ctx.textAlign="center";
+            ctx.textAlign="left";
+            ctx.fillStyle="#b66f59";
+            ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
+            ctx.fillText(priceText,tx,cy+imageH+44);
+            tx+=priceW+spacing;
+
+            ctx.fillStyle="#75665e";
+            ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
+            ctx.fillText(stockText,tx,cy+imageH+44);
+
+            if(variantLines.length){
+              ctx.textAlign="center";
+              ctx.fillStyle="#75665e";
+              ctx.font='600 12px Arial,"Microsoft JhengHei",sans-serif';
+              variantLines.forEach((line,li)=>{
+                ctx.fillText(line,x+cardW/2,cy+baseCardH+13+li*variantLineH);
+              });
+            }
+            ctx.textAlign="center";
+          }
+          y+=rowH+gap;
         }
-
-        const rows=Math.ceil(sec.items.length/cols);
-        y+=rows*cardH+Math.max(0,rows-1)*gap+sectionGap;
+        y+=sectionGap-gap;
       }
 
       const link=document.createElement("a");
