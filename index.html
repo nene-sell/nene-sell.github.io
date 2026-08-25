@@ -1416,7 +1416,7 @@ function catalogWrapVariantLines(ctx, rows, maxWidth){
   return lines;
 }
 
-async function generateProductCatalogImage(){
+async function generateProductCatalogImage(selectedFile=null){
   if(!isAdmin())return;
 
   const btn=$("#catalogImageBtn");
@@ -1477,13 +1477,17 @@ async function generateProductCatalogImage(){
       }
     ];
 
-    const available=categoryGroups.map(group=>({
+    let available=categoryGroups.map(group=>({
       ...group,
       sections:group.sections.map(sec=>({
         ...sec,
         items:saleProducts.filter(sec.match).sort((a,b)=>orderValue(a)-orderValue(b))
       })).filter(sec=>sec.items.length)
     })).filter(group=>group.sections.length);
+
+    if(selectedFile){
+      available=available.filter(group=>group.file===selectedFile);
+    }
 
     if(!available.length){
       toast("目前沒有可產生的販售商品");
@@ -2011,7 +2015,38 @@ onAuthStateChanged(auth,user=>{
 });
 
 $("#addBtn").onclick=()=>openProduct();
-$("#catalogImageBtn").onclick=generateProductCatalogImage;
+
+$("#catalogImageBtn").onclick=()=>{
+  document.querySelector("#catalogPickerDialog")?.remove();
+  const wrap=document.createElement("div");
+  wrap.id="catalogPickerDialog";
+  wrap.innerHTML=`
+    <div class="catalog-picker-backdrop"></div>
+    <div class="catalog-picker-box">
+      <div class="catalog-picker-title">產生哪個分類？</div>
+      <div class="catalog-picker-grid">
+        <button data-cat="家具">家具</button>
+        <button data-cat="玩偶">玩偶</button>
+        <button data-cat="花盆">花盆</button>
+        <button data-cat="戒指">戒指</button>
+        <button data-cat="作物">作物</button>
+        <button data-cat="寵物">寵物</button>
+        <button class="catalog-all" data-cat="">全部產生</button>
+      </div>
+      <button class="catalog-picker-cancel">取消</button>
+    </div>`;
+  document.body.appendChild(wrap);
+  const close=()=>wrap.remove();
+  wrap.querySelector(".catalog-picker-backdrop").onclick=close;
+  wrap.querySelector(".catalog-picker-cancel").onclick=close;
+  wrap.querySelectorAll("[data-cat]").forEach(b=>{
+    b.onclick=async()=>{
+      const cat=b.dataset.cat||null;
+      close();
+      await generateProductCatalogImage(cat);
+    };
+  });
+};
 $("#searchInput").oninput=render;
 
 function closeCategoryMenus(except=null){
@@ -3916,4 +3951,15 @@ main.wrap{
 @media(max-width:560px){
   #catalogImageBtn{font-size:11px!important;padding:8px 10px!important}
 }
+</style>
+
+<style>
+.catalog-picker-backdrop{position:fixed;inset:0;background:rgba(40,30,25,.35);z-index:100000}
+.catalog-picker-box{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:100001;width:min(360px,calc(100% - 30px));background:#fffaf6;border:1px solid #d8c8bd;border-radius:16px;box-shadow:0 14px 45px rgba(55,40,32,.22);padding:18px}
+.catalog-picker-title{text-align:center;font-weight:800;font-size:16px;color:#57453b;margin-bottom:13px}
+.catalog-picker-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.catalog-picker-grid button,.catalog-picker-cancel{border:1px solid #cdb9ac;background:#f7eee8;color:#665147;border-radius:10px;padding:10px 8px;font-weight:700;cursor:pointer}
+.catalog-picker-grid button:hover,.catalog-picker-cancel:hover{background:#efe1d8}
+.catalog-picker-grid .catalog-all{grid-column:1/-1;background:#765d50;color:white;border-color:#765d50}
+.catalog-picker-cancel{display:block;width:100%;margin-top:9px;background:white}
 </style>
