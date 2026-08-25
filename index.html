@@ -535,7 +535,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
     </div><button class="tab" data-category="寵物">寵物</button><button class="tab" data-category="收購區">收購區</button>
   </nav>
 <section class="section-head">
-    <div><h3 id="sectionTitle">全部商品</h3><p id="productCount">0 件商品</p></div>
+    <div><h3 id="sectionTitle">全部商品</h3><p id="productCount">商品載入中… ♡</p></div>
   </section>
 
   <section id="grid" class="grid"></section>
@@ -712,6 +712,7 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
 let products = [];
+let productsInitialLoaded=false;
 let activeCategory = "家具";
 let activeGroup = "";
 let currentUser = null;
@@ -1122,6 +1123,13 @@ function dealHintText(p){
 
 
 function render(){
+  if(!productsInitialLoaded){
+    $("#productCount").textContent="商品載入中… ♡";
+    $("#grid").innerHTML="";
+    $("#empty").classList.add("hidden");
+    return;
+  }
+
   const q=$("#searchInput").value.trim().toLowerCase();
   const buyMode=isBuyCategory();
   let list = products.filter(p => {
@@ -2165,6 +2173,7 @@ document.addEventListener("click",e=>{
 onSnapshot(
   collection(db,"products"),
   snap=>{
+    productsInitialLoaded=true;
     products=snap.docs.map(d=>({id:d.id,...d.data()}));
     $("#status").textContent="已連線";
     render();
@@ -2173,6 +2182,8 @@ onSnapshot(
   err=>{
     console.error(err);
     $("#status").textContent="資料讀取失敗";
+    $("#productCount").textContent="商品暫時無法載入";
+    $("#empty").classList.add("hidden");
   }
 );
 
