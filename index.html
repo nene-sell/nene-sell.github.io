@@ -2016,7 +2016,7 @@ onAuthStateChanged(auth,user=>{
 
 $("#addBtn").onclick=()=>openProduct();
 
-$("#catalogImageBtn").onclick=()=>{
+function openCatalogPicker(){
   document.querySelector("#catalogPickerDialog")?.remove();
   const wrap=document.createElement("div");
   wrap.id="catalogPickerDialog";
@@ -2046,7 +2046,9 @@ $("#catalogImageBtn").onclick=()=>{
       await generateProductCatalogImage(cat);
     };
   });
-};
+}
+
+$("#catalogImageBtn").onclick=openCatalogPicker;
 $("#searchInput").oninput=render;
 
 function closeCategoryMenus(except=null){
