@@ -514,7 +514,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
   <section class="toolbar">
     <input id="searchInput" class="search" placeholder="搜尋商品名稱…">
     <button id="addBtn" class="btn primary hidden">＋ 新增商品</button>
-    <button id="catalogImageBtn" class="btn hidden" type="button">📷 產生商品總圖</button>
+    <button id="catalogImageBtn" class="btn hidden" type="button">📷 產生分類販售圖</button>
     <span id="status" style="display:none!important"></span>
 </section>
 
@@ -1393,16 +1393,6 @@ async function generateProductCatalogImage(){
     btn.disabled=true;
     btn.textContent="產生中…";
 
-    const categoryOrder=[
-      {key:"家具",label:"家具"},
-      {key:"玩偶",label:"玩偶"},
-      {key:"花盆",label:"花盆"},
-      {key:"戒指限男",label:"戒指 · Male"},
-      {key:"戒指限女",label:"戒指 · Female"},
-      {key:"作物限男",label:"作物 · Male"},
-      {key:"作物限女",label:"作物 · Female"},
-      {key:"寵物",label:"寵物"}
-    ];
     const saleProducts=products.filter(p=>{
       if(p.category==="收購區")return false;
       const sold=p.status==="sold" || getStock(p)<=0;
@@ -1415,15 +1405,56 @@ async function generateProductCatalogImage(){
       return -((p?.createdAt?.seconds||0)*1000);
     };
 
-    const groups=[];
-    for(const group of categoryOrder){
-      const items=saleProducts
-        .filter(p=>String(p.category||"")===group.key)
-        .sort((a,b)=>orderValue(a)-orderValue(b));
-      if(items.length)groups.push({name:group.label,items});
-    }
+    const categoryGroups=[
+      {
+        file:"家具",
+        title:"家具",
+        sections:[{label:"家具",match:p=>String(p.category||"")==="家具"}]
+      },
+      {
+        file:"玩偶",
+        title:"玩偶",
+        sections:[{label:"玩偶",match:p=>String(p.category||"")==="玩偶"}]
+      },
+      {
+        file:"花盆",
+        title:"花盆",
+        sections:[{label:"花盆",match:p=>String(p.category||"")==="花盆"}]
+      },
+      {
+        file:"戒指",
+        title:"戒指",
+        sections:[
+          {label:"Male",match:p=>String(p.category||"")==="戒指限男"},
+          {label:"Female",match:p=>String(p.category||"")==="戒指限女"}
+        ],
+        note:"Couple Lv.10 provided by buyer. Candy first, ring after."
+      },
+      {
+        file:"作物",
+        title:"作物",
+        sections:[
+          {label:"Male",match:p=>String(p.category||"")==="作物限男"},
+          {label:"Female",match:p=>String(p.category||"")==="作物限女"}
+        ],
+        note:"Candy first, planting after."
+      },
+      {
+        file:"寵物",
+        title:"寵物",
+        sections:[{label:"寵物",match:p=>String(p.category||"")==="寵物"}]
+      }
+    ];
 
-    if(!groups.length){
+    const available=categoryGroups.map(group=>({
+      ...group,
+      sections:group.sections.map(sec=>({
+        ...sec,
+        items:saleProducts.filter(sec.match).sort((a,b)=>orderValue(a)-orderValue(b))
+      })).filter(sec=>sec.items.length)
+    })).filter(group=>group.sections.length);
+
+    if(!available.length){
       toast("目前沒有可產生的販售商品");
       return;
     }
@@ -1431,144 +1462,151 @@ async function generateProductCatalogImage(){
     const W=1400;
     const EXPORT_SCALE=3;
     const cols=6;
-    const side=22;
-    const gap=8;
+    const side=18;
+    const gap=6;
     const cardW=Math.floor((W-side*2-gap*(cols-1))/cols);
     const imageH=cardW;
-    const cardH=imageH+58;
-    const topH=118;
-    const groupTitleH=70;
-    const groupGap=14;
+    const cardH=imageH+54;
+    const topH=105;
+    const sectionTitleH=58;
+    const sectionGap=16;
 
-    let H=topH;
-    groups.forEach(g=>{
-      const rows=Math.ceil(g.items.length/cols);
-      H+=groupTitleH + rows*cardH + Math.max(0,rows-1)*gap + groupGap;
-    });
-    H+=24;
+    async function exportOne(group){
+      let H=topH;
+      group.sections.forEach(sec=>{
+        const rows=Math.ceil(sec.items.length/cols);
+        H+=sectionTitleH + rows*cardH + Math.max(0,rows-1)*gap + sectionGap;
+      });
+      H+=18;
 
-    const canvas=document.createElement("canvas");
-    canvas.width=W*EXPORT_SCALE;
-    canvas.height=H*EXPORT_SCALE;
-    const ctx=canvas.getContext("2d");
-    ctx.scale(EXPORT_SCALE,EXPORT_SCALE);
-    ctx.imageSmoothingEnabled=true;
-    ctx.imageSmoothingQuality="high";
+      const canvas=document.createElement("canvas");
+      canvas.width=W*EXPORT_SCALE;
+      canvas.height=H*EXPORT_SCALE;
+      const ctx=canvas.getContext("2d");
+      ctx.scale(EXPORT_SCALE,EXPORT_SCALE);
+      ctx.imageSmoothingEnabled=true;
+      ctx.imageSmoothingQuality="high";
 
-    ctx.fillStyle="#f4ece5";
-    ctx.fillRect(0,0,W,H);
+      ctx.fillStyle="#f4ece5";
+      ctx.fillRect(0,0,W,H);
 
-    ctx.textAlign="center";
-    ctx.fillStyle="#4b3b32";
-    ctx.font='700 34px Arial,"Microsoft JhengHei",sans-serif';
-    ctx.fillText("販售清單",W/2,50);
-    ctx.fillStyle="#8a7467";
-    ctx.font='18px Arial,"Microsoft JhengHei",sans-serif';
-    ctx.fillText("Sale List",W/2,80);
+      ctx.textAlign="center";
+      ctx.fillStyle="#4b3b32";
+      ctx.font='700 34px Arial,"Microsoft JhengHei",sans-serif';
+      ctx.fillText(`${group.title}｜販售清單`,W/2,46);
 
-    let y=topH;
-    for(const group of groups){
-      ctx.textAlign="left";
-      ctx.fillStyle="#5c493e";
-      ctx.font='700 27px Arial,"Microsoft JhengHei",sans-serif';
-      ctx.fillText(group.name,side,y+34);
-
-      if(group.name.startsWith("戒指")){
-        ctx.font='600 13px Arial,"Microsoft JhengHei",sans-serif';
+      if(group.note){
         ctx.fillStyle="#8a7467";
-        ctx.fillText("Couple Lv.10 provided by buyer. Candy first, ring after.",side,y+55);
-      }
-      if(group.name.startsWith("作物")){
-        ctx.font='600 13px Arial,"Microsoft JhengHei",sans-serif';
+        ctx.font='600 14px Arial,"Microsoft JhengHei",sans-serif';
+        ctx.fillText(group.note,W/2,76);
+      }else{
         ctx.fillStyle="#8a7467";
-        ctx.fillText("Candy first, planting after.",side,y+55);
+        ctx.font='16px Arial,"Microsoft JhengHei",sans-serif';
+        ctx.fillText("Sale List",W/2,76);
       }
 
-      ctx.strokeStyle="#ccb8aa";
-      ctx.lineWidth=1;
-      ctx.beginPath();
-      ctx.moveTo(side,y+70);
-      ctx.lineTo(W-side,y+70);
-      ctx.stroke();
+      let y=topH;
 
-      y+=groupTitleH;
+      for(const sec of group.sections){
+        ctx.textAlign="left";
+        ctx.fillStyle="#5c493e";
+        ctx.font='700 24px Arial,"Microsoft JhengHei",sans-serif';
+        ctx.fillText(sec.label,side,y+31);
 
-      for(let i=0;i<group.items.length;i++){
-        const p=group.items[i];
-        const col=i%cols;
-        const row=Math.floor(i/cols);
-        const x=side+col*(cardW+gap);
-        const cy=y+row*(cardH+gap);
-
-        ctx.fillStyle="#fffaf6";
-        catalogRoundRect(ctx,x,cy,cardW,cardH,7);
-        ctx.fill();
-        ctx.strokeStyle="#d8c8bd";
+        ctx.strokeStyle="#ccb8aa";
+        ctx.lineWidth=1;
+        ctx.beginPath();
+        ctx.moveTo(side,y+44);
+        ctx.lineTo(W-side,y+44);
         ctx.stroke();
 
-        try{
-          const img=await loadCatalogImage(p.imageData);
-          const scale=Math.min(cardW/img.width,imageH/img.height);
-          const dw=img.width*scale;
-          const dh=img.height*scale;
-          const dx=x+(cardW-dw)/2;
-          const dy=cy+(imageH-dh)/2;
+        y+=sectionTitleH;
 
-          ctx.save();
-          catalogRoundRect(ctx,x,cy,cardW,imageH,7);
-          ctx.clip();
-          ctx.fillStyle="#eee2d8";
-          ctx.fillRect(x,cy,cardW,imageH);
-          ctx.drawImage(img,dx,dy,dw,dh);
-          ctx.restore();
-        }catch{}
+        for(let i=0;i<sec.items.length;i++){
+          const p=sec.items[i];
+          const col=i%cols;
+          const row=Math.floor(i/cols);
+          const x=side+col*(cardW+gap);
+          const cy=y+row*(cardH+gap);
 
-        ctx.textAlign="center";
-        ctx.fillStyle="#493a32";
-        ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
-        ctx.fillText(catalogFitText(ctx,p.name,cardW-10),x+cardW/2,cy+imageH+21);
+          ctx.fillStyle="#fffaf6";
+          catalogRoundRect(ctx,x,cy,cardW,cardH,7);
+          ctx.fill();
+          ctx.strokeStyle="#d8c8bd";
+          ctx.stroke();
 
-        const catalogStock=getStock(p);
-        const priceText=String(p.price||"");
-        const stockText=`×${catalogStock}`;
+          try{
+            const img=await loadCatalogImage(p.imageData);
+            const scale=Math.min(cardW/img.width,imageH/img.height);
+            const dw=img.width*scale;
+            const dh=img.height*scale;
+            const dx=x+(cardW-dw)/2;
+            const dy=cy+(imageH-dh)/2;
 
-        ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
-        const priceW=ctx.measureText(priceText).width;
-        ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
-        const stockW=ctx.measureText(stockText).width;
-        const spacing=8;
-        const totalW=priceW+spacing+stockW;
-        let tx=x+(cardW-totalW)/2;
+            ctx.save();
+            catalogRoundRect(ctx,x,cy,cardW,imageH,7);
+            ctx.clip();
+            ctx.fillStyle="#eee2d8";
+            ctx.fillRect(x,cy,cardW,imageH);
+            ctx.drawImage(img,dx,dy,dw,dh);
+            ctx.restore();
+          }catch{}
 
-        ctx.textAlign="left";
-        ctx.fillStyle="#b66f59";
-        ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
-        ctx.fillText(priceText,tx,cy+imageH+45);
-        tx+=priceW+spacing;
+          ctx.textAlign="center";
+          ctx.fillStyle="#493a32";
+          ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
+          ctx.fillText(catalogFitText(ctx,p.name,cardW-10),x+cardW/2,cy+imageH+20);
 
-        ctx.fillStyle="#75665e";
-        ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
-        ctx.fillText(stockText,tx,cy+imageH+45);
-        ctx.textAlign="center";
+          const catalogStock=getStock(p);
+          const priceText=String(p.price||"");
+          const stockText=`×${catalogStock}`;
+
+          ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
+          const priceW=ctx.measureText(priceText).width;
+          ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
+          const stockW=ctx.measureText(stockText).width;
+          const spacing=8;
+          const totalW=priceW+spacing+stockW;
+          let tx=x+(cardW-totalW)/2;
+
+          ctx.textAlign="left";
+          ctx.fillStyle="#b66f59";
+          ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
+          ctx.fillText(priceText,tx,cy+imageH+44);
+          tx+=priceW+spacing;
+
+          ctx.fillStyle="#75665e";
+          ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
+          ctx.fillText(stockText,tx,cy+imageH+44);
+          ctx.textAlign="center";
+        }
+
+        const rows=Math.ceil(sec.items.length/cols);
+        y+=rows*cardH+Math.max(0,rows-1)*gap+sectionGap;
       }
 
-      const rows=Math.ceil(group.items.length/cols);
-      y+=rows*cardH+Math.max(0,rows-1)*gap+groupGap;
+      const link=document.createElement("a");
+      link.download=`販售清單-${group.file}-${new Date().toISOString().slice(0,10)}.jpg`;
+      link.href=canvas.toDataURL("image/jpeg",0.95);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      // Give browsers a small pause between multiple automatic downloads.
+      await new Promise(r=>setTimeout(r,250));
     }
 
-    const link=document.createElement("a");
-    link.download=`販售清單-6欄-${new Date().toISOString().slice(0,10)}.jpg`;
-    link.href=canvas.toDataURL("image/jpeg",0.95);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    toast("商品總圖已產生 ♡");
+    for(const group of available){
+      await exportOne(group);
+    }
+
+    toast(`已產生 ${available.length} 張分類販售清單 ♡`);
   }catch(err){
     console.error(err);
-    toast("商品總圖產生失敗");
+    toast("販售清單產生失敗");
   }finally{
     btn.disabled=false;
-    btn.textContent="📷 產生商品總圖";
+    btn.textContent="📷 產生分類販售圖";
   }
 }
 
