@@ -928,9 +928,19 @@ function renderCart(){
 
     const row=document.createElement("div");
     row.className="cart-item";
-    const lineTotal=parsed.amount!==null
-      ? `${Number.isInteger(parsed.amount*item.qty)?parsed.amount*item.qty:(parsed.amount*item.qty).toFixed(2)} ${esc(parsed.unit)}`
-      : esc(p.price);
+    // 顯示金額也要套用優惠：同商品（含不同款式）合計達優惠數量時，
+    // 第一列顯示優惠後總額，其餘同商品款式不重複顯示金額。
+    let lineTotal;
+    if(!buy && groupDiscounted && isFirstSameProduct){
+      lineTotal=`${neatNum(groupDiscounted.amount)}${groupDiscounted.unit?` ${esc(groupDiscounted.unit)}`:""}`;
+    }else if(!buy && groupDiscounted && !isFirstSameProduct){
+      lineTotal="";
+    }else if(parsed.amount!==null){
+      const amount=parsed.amount*item.qty;
+      lineTotal=`${neatNum(amount)}${parsed.unit?` ${esc(parsed.unit)}`:""}`;
+    }else{
+      lineTotal=esc(p.price);
+    }
 
     row.innerHTML=`
       <img src="${p.imageData||""}" alt="${esc(p.name)}">
