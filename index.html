@@ -492,6 +492,46 @@ dialog input:focus,dialog select:focus{border-color:#666}
   text-decoration:none !important;
 }
 </style>
+
+<style>
+/* 交換區專用 */
+.exchange-fields{display:none;gap:12px;padding:12px;border:1px solid #2f2f35;border-radius:14px;background:#17171b}
+.exchange-fields.show{display:grid}
+.exchange-want-preview{width:100%;max-height:220px;object-fit:contain;border-radius:12px;border:1px solid #303038;background:#0e0e11}
+.exchange-card .price,.exchange-card .bulk-deal,.exchange-card .deal-next-hint{display:none!important}
+.exchange-pair{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:start;margin:10px 0 4px}
+.exchange-side{min-width:0}
+.exchange-side img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px;background:#0e0e11;border:1px solid #2e2e34}
+.exchange-side-label{font-size:10px;color:#999;margin-bottom:5px;font-weight:800;letter-spacing:.06em}
+.exchange-side-name{font-size:12px;font-weight:800;line-height:1.35;margin-top:6px;word-break:break-word}
+.exchange-arrow{align-self:center;font-size:20px;color:#aaa;padding-top:18px}
+.exchange-note{font-size:11px;color:#aaa;margin-top:7px}
+.exchange-card .card-media{display:none}
+.exchange-card .card-title{display:none}
+.exchange-card .buy-actions{display:none!important}
+.exchange-card .variant-picker{display:none!important}
+@media (max-width:560px){
+  .exchange-pair{grid-template-columns:1fr 24px 1fr;gap:6px}
+  .exchange-arrow{font-size:16px}
+}
+</style>
+
+
+<style>
+.exchange-offer-editor{display:grid;gap:10px}
+.exchange-offer-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;padding:10px;border:1px solid #303038;border-radius:12px}
+.exchange-offer-row img{grid-column:1/-1;width:90px;height:90px;object-fit:cover;border-radius:10px;border:1px solid #303038}
+.exchange-offer-row .remove-offer{height:42px}
+.exchange-offer-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));gap:8px}
+.exchange-offer-list .exchange-side{min-width:0}
+.exchange-pair.multi-offer{grid-template-columns:minmax(0,1.45fr) auto minmax(0,1fr)}
+@media(max-width:560px){
+  .exchange-offer-row{grid-template-columns:1fr auto}
+  .exchange-offer-row label:first-child{grid-column:1/-1}
+  .exchange-pair.multi-offer{grid-template-columns:minmax(0,1.4fr) 20px minmax(0,1fr)}
+}
+</style>
+
 </head>
 <body>
 <header class="topbar">
@@ -645,13 +685,30 @@ dialog input:focus,dialog select:focus{border-color:#666}
       </div>
     </div>
 
-    <label>名稱
+    <label><span id="productNameLabel">名稱</span>
       <input id="productName" placeholder="例如：黑色鹿角裝飾" required maxlength="80">
     </label>
-    <label>圖片
+    <label><span id="productImageLabel">圖片</span>
       <input id="productImage" type="file" accept="image/*">
     </label>
     <img id="preview" class="preview hidden" alt="預覽">
+
+    <div id="exchangeFields" class="exchange-fields">
+      <div>
+        <strong>我提供的道具</strong>
+        <div class="variant-help">可以放一個或多個；沒有填的項目不會顯示。</div>
+      </div>
+      <div id="exchangeOfferEditor" class="exchange-offer-editor"></div>
+      <button id="addExchangeOfferBtn" class="btn" type="button">＋ 新增提供道具</button>
+      <label>想要的道具名稱
+        <input id="exchangeWantName" placeholder="例如：粉色公主花盆" maxlength="80">
+      </label>
+      <label>想要的道具圖片
+        <input id="exchangeWantImage" type="file" accept="image/*">
+      </label>
+      <img id="exchangeWantPreview" class="exchange-want-preview hidden" alt="想要的道具預覽">
+      <button id="removeExchangeWantImageBtn" class="btn hidden" type="button">移除想要的道具圖片</button>
+    </div>
     <div class="notice">圖片會在上架前自動縮小壓縮，再和商品資料一起存到 Firestore。建議原圖不要太誇張大張。</div>
     <div id="productError" class="error"></div>
     <button id="saveProductBtn" class="btn primary full" type="submit">儲存商品</button>
@@ -1188,6 +1245,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
 
   list.forEach(p=>{
     const isBuy=p.category==="收購區";
+    const isExchange=p.category==="交換區";
     const reserved=!isBuy && p.status==="reserved";
     const sold=!isBuy && !reserved && (p.status==="sold" || getStock(p)<=0);
     const limit=getStock(p);
@@ -1195,11 +1253,13 @@ $("#productCount").textContent=`${list.length} 件商品`;
     const defaultVariant=variants.find(v=>v.stock>0)?.name||variants[0]?.name||"";
     const selectedQty=qtyFor(p.id,isBuy?"buy":"sale",defaultVariant);
     const card=document.createElement("article");
-    card.className=`card ${isBuy?"wanted-card":""}${reserved?" reserved-card":""}${sold?" sold-card":""}`;
+    card.className=`card ${isBuy?"wanted-card":""}${isExchange?" exchange-card":""}${reserved?" reserved-card":""}${sold?" sold-card":""}`;
 
     const statusText=isBuy
       ? (limit===0 ? "已收齊" : limit<=2 ? `還缺 ${limit}` : `需求 ${limit}`)
-      : (sold ? "售完" : reserved ? "已預訂" : limit===0 ? "已售完" : `庫存 ${limit}`);
+      : isExchange
+        ? (sold ? "已換出" : reserved ? "交換預定中" : limit===0 ? "已換出" : `可交換 ${limit}`)
+        : (sold ? "售完" : reserved ? "已預訂" : limit===0 ? "已售完" : `庫存 ${limit}`);
 
     card.innerHTML=`
       <div class="card-media">
@@ -1207,9 +1267,35 @@ $("#productCount").textContent=`${list.length} 件商品`;
         ${p.demoVideoPath ? `<button type="button" class="video-badge" title="直接看展示影片"><span class="video-play">▶</span><span class="video-label">展示影片</span></button>` : ""}
       </div>
       <div class="card-body">
-        <div class="badge-row"><span class="badge">${esc(p.category)}</span>${isNewActive(p)?`<span class="new-badge">新品</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}${sold?`<span class="sold-badge">售完</span>`:""}</div>
+        <div class="badge-row"><span class="badge">${esc(p.category)}</span>${isNewActive(p)?`<span class="new-badge">新品</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}${sold?`<span class="sold-badge">${isExchange?"已換出":"售完"}</span>`:""}</div>
+        ${isExchange ? (()=>{
+          const offers=(Array.isArray(p.exchangeOffers)&&p.exchangeOffers.length
+            ? p.exchangeOffers
+            : [{name:p.name||"",imageData:p.imageData||""}]
+          ).filter(x=>x && (x.name||x.imageData));
+          return `
+          <div class="exchange-pair ${offers.length>1?"multi-offer":""}">
+            <div>
+              <div class="exchange-side-label">我提供</div>
+              <div class="exchange-offer-list">
+                ${offers.map(x=>`
+                  <div class="exchange-side">
+                    ${x.imageData?`<img src="${x.imageData}" alt="${esc(x.name||"提供道具")}">`:""}
+                    ${x.name?`<div class="exchange-side-name">${esc(x.name)}</div>`:""}
+                  </div>
+                `).join("")}
+              </div>
+            </div>
+            <div class="exchange-arrow">⇄</div>
+            <div class="exchange-side">
+              <div class="exchange-side-label">想換</div>
+              ${p.exchangeWantImageData?`<img src="${p.exchangeWantImageData}" alt="${esc(p.exchangeWantName||"想換的道具")}">`:""}
+              ${p.exchangeWantName?`<div class="exchange-side-name">${esc(p.exchangeWantName)}</div>`:""}
+            </div>
+          </div>`;
+        })() : ""}
         <div class="card-title">${esc(p.name)}</div>
-        <div class="price">${isBuy?"收購價：":""}${esc(p.price)}</div>
+        ${!isExchange?`<div class="price">${isBuy?"收購價：":""}${esc(p.price)}</div>`:""}
         ${!isBuy&&bulkDeal(p)?`<div class="bulk-deal">${esc((p.discountText||"").trim()||"任選")} ${bulkDeal(p).qty} 個總額 ${neatNum(bulkDeal(p).price)}${priceParts(p.price)?.unit?` ${esc(priceParts(p.price).unit)}`:""}</div>${dealHintText(p)?`<div class="deal-next-hint">${dealHintText(p)}</div>`:""}`:""}
         <div class="stock ${limit===0?"out":limit<=2?"low":""}">${statusText}</div>
 
@@ -1225,7 +1311,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
             </div>
           ` : `
             <div class="stock-quick arrow-stock">
-              <span>快速庫存</span>
+              <span>${isExchange?"可交換數量":"快速庫存"}</span>
               <strong>${limit}</strong>
               <div class="stock-arrows">
                 <button class="stock-plus" type="button" aria-label="庫存加一">▲</button>
@@ -1240,6 +1326,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
             <button class="btn danger delete">刪除</button>
           </div>
         `:`
+          ${isExchange ? `<div class="exchange-note">有想交換的道具請截圖私訊我 ♡</div>` : `
           ${variants.length
   ? `<div class="variant-picker"><span>款式</span><select class="variant-select">${variants.map(v=>`<option value="${esc(v.name)}" ${v.stock===0?"disabled":""}>${esc(v.name)}｜${isBuy?"需求":"庫存"} ${v.stock}</option>`).join("")}</select></div>`
   : `<div class="variant-picker variant-placeholder"><span>款式</span><select class="variant-select" disabled><option>無款式</option></select></div>`
@@ -1259,6 +1346,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
                   : (isBuy?"我有這個":"加入清單")
             }</button>
           </div>
+          `}
         `}
       </div>`;
 
@@ -1771,19 +1859,37 @@ function collectVariants(){return $$(".variant-row",$("#variantRows")).map(r=>({
 })).filter(v=>v.name);}
 
 function updateProductFormMode(){
-  const buy=$("#productCategory").value==="收購區";
-  $("#stockFieldLabel").textContent=buy ? "需求數量" : "庫存";
-  $("#productPrice").previousSibling;
+  const category=$("#productCategory").value;
+  const buy=category==="收購區";
+  const exchange=category==="交換區";
+
+  $("#stockFieldLabel").textContent=buy ? "需求數量" : exchange ? "可交換數量" : "庫存";
   $("#productPrice").placeholder=buy ? "例如：100 T" : "例如：80 糖";
+
+  const priceLabel=$("#productPrice")?.closest("label");
+  const bulkAdmin=document.querySelector(".bulk-admin");
+  if(priceLabel) priceLabel.style.display=exchange ? "none" : "";
+  if(bulkAdmin) bulkAdmin.style.display=exchange ? "none" : "";
+  $("#productPrice").required=!exchange;
+
+  $("#exchangeFields")?.classList.toggle("show",exchange);
+  const normalNameLabel=$("#productName")?.closest("label");
+  const normalImageLabel=$("#productImage")?.closest("label");
+  if(normalNameLabel) normalNameLabel.style.display=exchange ? "none" : "";
+  if(normalImageLabel) normalImageLabel.style.display=exchange ? "none" : "";
+  $("#preview")?.classList.toggle("hidden",exchange || !editingImage);
+  $("#productName").required=!exchange;
+
+  if(exchange && !$("#productPrice").value) $("#productPrice").value="交換";
 }
 
 function openProduct(p=null){
   $("#productDialogTitle").textContent=p?"編輯商品":"新增商品";
   $("#productId").value=p?.id||"";
   $("#productCategory").value=p?.category||"家具";
-  updateProductFormMode();
   $("#productName").value=p?.name||"";
   $("#productPrice").value=p?.price||"";
+  updateProductFormMode();
   $("#discountQty").value=p?.discountQty||"";
   $("#discountPrice").value=p?.discountPrice??"";
   $("#discountText").value=p?.discountText||"";
@@ -1793,6 +1899,20 @@ function openProduct(p=null){
   loadVariantRows(p);
   $("#productImage").value="";
   editingImage=p?.imageData||"";
+  editingExchangeOffers=normalizeExchangeOffers(p);
+  renderExchangeOfferEditor();
+  editingExchangeWantImage=p?.exchangeWantImageData||"";
+  $("#exchangeWantName").value=p?.exchangeWantName||"";
+  $("#exchangeWantImage").value="";
+  if(editingExchangeWantImage){
+    $("#exchangeWantPreview").src=editingExchangeWantImage;
+    $("#exchangeWantPreview").classList.remove("hidden");
+    $("#removeExchangeWantImageBtn").classList.remove("hidden");
+  }else{
+    $("#exchangeWantPreview").src="";
+    $("#exchangeWantPreview").classList.add("hidden");
+    $("#removeExchangeWantImageBtn").classList.add("hidden");
+  }
   editingRealImage=p?.realImageData||"";
   editingDemoVideoPath=p?.demoVideoPath||"";
   const demoInput=$("#productDemoVideoPath");
@@ -1838,6 +1958,38 @@ $("#productImage").addEventListener("change", async e=>{
   }
 });
 
+
+
+$("#addExchangeOfferBtn").onclick=()=>{
+  editingExchangeOffers.push({name:"",imageData:""});
+  renderExchangeOfferEditor();
+};
+
+$("#exchangeWantImage").addEventListener("change", async e=>{
+  const file=e.target.files[0];
+  if(!file)return;
+  $("#productError").textContent="想要的道具圖片處理中…";
+  try{
+    editingExchangeWantImage=await compressImage(file);
+    $("#exchangeWantPreview").src=editingExchangeWantImage;
+    $("#exchangeWantPreview").classList.remove("hidden");
+    $("#removeExchangeWantImageBtn").classList.remove("hidden");
+    $("#productError").textContent="";
+  }catch(err){
+    editingExchangeWantImage="";
+    $("#exchangeWantPreview").classList.add("hidden");
+    $("#removeExchangeWantImageBtn").classList.add("hidden");
+    $("#productError").textContent=err.message||"圖片處理失敗";
+  }
+});
+
+$("#removeExchangeWantImageBtn").onclick=()=>{
+  editingExchangeWantImage="";
+  $("#exchangeWantImage").value="";
+  $("#exchangeWantPreview").src="";
+  $("#exchangeWantPreview").classList.add("hidden");
+  $("#removeExchangeWantImageBtn").classList.add("hidden");
+};
 
 $("#productRealImage").addEventListener("change", async e=>{
   const file=e.target.files[0];
@@ -1914,8 +2066,24 @@ $("#productForm").addEventListener("submit", async e=>{
     $("#productError").textContent="管理員尚未登入";
     return;
   }
-  if(!editingImage){
+  const isExchange=$("#productCategory").value==="交換區";
+  const cleanExchangeOffers=editingExchangeOffers
+    .map(x=>({name:String(x?.name||"").trim(),imageData:String(x?.imageData||"")}))
+    .filter(x=>x.name || x.imageData);
+  if(!isExchange && !editingImage){
     $("#productError").textContent="請選擇商品圖片";
+    return;
+  }
+  if(isExchange && (!cleanExchangeOffers.length || cleanExchangeOffers.some(x=>!x.name || !x.imageData))){
+    $("#productError").textContent="每個提供道具都要有名稱和圖片";
+    return;
+  }
+  if(isExchange && !$("#exchangeWantName").value.trim()){
+    $("#productError").textContent="請填寫想要的道具名稱";
+    return;
+  }
+  if(isExchange && !editingExchangeWantImage){
+    $("#productError").textContent="請選擇想要的道具圖片";
     return;
   }
 
@@ -1935,8 +2103,8 @@ $("#productForm").addEventListener("submit", async e=>{
       : null;
     const payload={
       category:$("#productCategory").value,
-      name:$("#productName").value.trim(),
-      price:$("#productPrice").value.trim(),
+      name:isExchange ? cleanExchangeOffers[0].name : $("#productName").value.trim(),
+      price:isExchange ? "交換" : $("#productPrice").value.trim(),
       discountQty:(()=>{
         const q=parseInt($("#discountQty").value||"",10), d=$("#discountPrice").value;
         return Number.isInteger(q)&&q>=2&&d!==""&&Number.isFinite(Number(d)) ? q : null;
@@ -1953,7 +2121,10 @@ $("#productForm").addEventListener("submit", async e=>{
         ? variants.reduce((sum,v)=>sum+v.stock,0)
         : Math.max(0,Math.floor(Number($("#productStock").value)||0)),
       variants,
-      imageData:editingImage,
+      imageData:isExchange ? cleanExchangeOffers[0].imageData : editingImage,
+      exchangeOffers:isExchange ? cleanExchangeOffers : [],
+      exchangeWantName:isExchange ? $("#exchangeWantName").value.trim() : "",
+      exchangeWantImageData:isExchange ? editingExchangeWantImage : "",
       realImageData:editingRealImage,
       demoVideoPath:normalizeDemoVideoPath($("#productDemoVideoPath")?.value||editingDemoVideoPath),
       updatedAt:serverTimestamp()
@@ -1973,6 +2144,8 @@ $("#productForm").addEventListener("submit", async e=>{
     $("#productForm").reset();
     $("#variantRows").innerHTML="";
     editingImage="";
+    editingExchangeOffers=[];
+    editingExchangeWantImage="";
     editingRealImage="";
     editingDemoVideoPath="";
     toast("商品已儲存");
