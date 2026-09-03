@@ -495,14 +495,14 @@ dialog input:focus,dialog select:focus{border-color:#666}
 
 <style>
 /* 交換區專用 */
-.exchange-fields{display:none;gap:12px;padding:12px;border:1px solid #2f2f35;border-radius:14px;background:#17171b}
+.exchange-fields{display:none;gap:12px;padding:12px;border:1px solid #2a2a30;border-radius:14px;background:#121216}
 .exchange-fields.show{display:grid}
-.exchange-want-preview{width:100%;max-height:220px;object-fit:contain;border-radius:12px;border:1px solid #303038;background:#0e0e11}
+.exchange-want-preview{width:100%;max-height:220px;object-fit:contain;border-radius:12px;border:1px solid #2a2a30;background:#111114}
 .exchange-card .price,.exchange-card .bulk-deal,.exchange-card .deal-next-hint{display:none!important}
 .exchange-pair{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:start;margin:10px 0 4px}
 .exchange-side{min-width:0}
-.exchange-side img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px;background:#0e0e11;border:1px solid #2e2e34}
-.exchange-side-label{font-size:10px;color:#999;margin-bottom:5px;font-weight:800;letter-spacing:.06em}
+.exchange-side img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px;background:#111114;border:1px solid #2e2e34}
+.exchange-side-label{font-size:10px;color:#aaa;margin-bottom:5px;font-weight:800;letter-spacing:.06em}
 .exchange-side-name{font-size:12px;font-weight:800;line-height:1.35;margin-top:6px;word-break:break-word}
 .exchange-arrow{align-self:center;font-size:20px;color:#aaa;padding-top:18px}
 .exchange-note{font-size:11px;color:#aaa;margin-top:7px}
@@ -519,8 +519,8 @@ dialog input:focus,dialog select:focus{border-color:#666}
 
 <style>
 .exchange-offer-editor{display:grid;gap:10px}
-.exchange-offer-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;padding:10px;border:1px solid #303038;border-radius:12px}
-.exchange-offer-row img{grid-column:1/-1;width:90px;height:90px;object-fit:cover;border-radius:10px;border:1px solid #303038}
+.exchange-offer-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;padding:10px;border:1px solid #2a2a30;border-radius:12px}
+.exchange-offer-row img{grid-column:1/-1;width:90px;height:90px;object-fit:cover;border-radius:10px;border:1px solid #2a2a30}
 .exchange-offer-row .remove-offer{height:42px}
 .exchange-offer-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));gap:8px}
 .exchange-offer-list .exchange-side{min-width:0}
@@ -529,6 +529,283 @@ dialog input:focus,dialog select:focus{border-color:#666}
   .exchange-offer-row{grid-template-columns:1fr auto}
   .exchange-offer-row label:first-child{grid-column:1/-1}
   .exchange-pair.multi-offer{grid-template-columns:minmax(0,1.4fr) 20px minmax(0,1fr)}
+}
+</style>
+
+
+<style>
+/* 交換區：低調中性色，並讓內容直接完整攤開 */
+.exchange-card{background:#151519!important;border-color:#2b2b31!important}
+.exchange-card .badge{background:transparent!important;color:#b9b9bf!important;border-color:#34343a!important}
+.exchange-card .exchange-pair{
+  background:transparent;
+  border:0;
+  padding:0;
+  margin-top:10px;
+}
+.exchange-card .exchange-side-label{
+  color:#b7b7bd!important;
+  font-size:11px;
+}
+.exchange-card .exchange-side-name{
+  color:#f0f0f2;
+}
+.exchange-card .exchange-note{
+  color:#9c9ca3;
+  border-top:1px solid #29292f;
+  padding-top:9px;
+}
+.exchange-offer-list{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
+  gap:10px;
+}
+.exchange-offer-list .exchange-side,
+.exchange-card .exchange-side{
+  display:block;
+}
+.exchange-offer-list img,
+.exchange-card .exchange-side>img{
+  width:100%;
+  height:auto;
+  aspect-ratio:auto;
+  max-height:none;
+  object-fit:contain;
+  background:#101013;
+}
+/* 交換區卡片不做內部滾動或固定高度，內容有多少就展開多少 */
+.exchange-card,
+.exchange-card .card-body,
+.exchange-card .exchange-pair,
+.exchange-card .exchange-offer-list{
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+.exchange-card .card-body{
+  padding-bottom:14px!important;
+}
+@media(max-width:560px){
+  .exchange-offer-list{grid-template-columns:repeat(auto-fit,minmax(90px,1fr))}
+}
+</style>
+
+
+<style>
+.exchange-fields{
+  background:#121216!important;
+  border-color:#2a2a30!important;
+}
+.exchange-offer-row{
+  background:#141418;
+  border-color:#2a2a30!important;
+}
+.exchange-offer-row img,
+.exchange-want-preview{
+  background:#101013!important;
+  border-color:#2a2a30!important;
+}
+</style>
+
+
+<style>
+/* 交換區後台：改回網站原本的米棕色系 */
+#exchangeFields.exchange-fields{
+  background:transparent!important;
+  border:0!important;
+  padding:0!important;
+  gap:12px!important;
+}
+#exchangeFields > div:first-child{
+  padding:0 2px;
+}
+#exchangeFields > div:first-child strong{
+  color:#6f513d!important;
+  font-size:14px;
+}
+#exchangeFields .variant-help{
+  color:#92745f!important;
+  margin-top:4px;
+}
+#exchangeOfferEditor.exchange-offer-editor{
+  gap:10px;
+}
+#exchangeOfferEditor .exchange-offer-row{
+  background:#ead8c7!important;
+  border:1px solid #cdb29c!important;
+  border-radius:13px!important;
+  padding:12px!important;
+}
+#exchangeFields label{
+  color:#725641!important;
+}
+#exchangeFields input[type="text"],
+#exchangeFields input:not([type]),
+#exchangeFields .exchange-offer-name{
+  background:#f3e4d6!important;
+  color:#5d4635!important;
+  border:1px solid #c9aa91!important;
+}
+#exchangeFields input::placeholder{
+  color:#8b6c56!important;
+  opacity:1;
+}
+#exchangeFields input[type="file"]{
+  background:#e2cbb7!important;
+  color:#5d4635!important;
+  border:1px solid #c3a58c!important;
+}
+#exchangeFields input[type="file"]::file-selector-button{
+  background:#d2b69e!important;
+  color:#4f3b2e!important;
+  border:1px solid #aa8c74!important;
+  border-radius:8px!important;
+  padding:8px 10px!important;
+  margin-right:9px!important;
+}
+#exchangeFields #addExchangeOfferBtn,
+#exchangeFields .remove-offer,
+#exchangeFields #removeExchangeWantImageBtn{
+  background:#d7c0ab!important;
+  color:#594232!important;
+  border:1px solid #b99a82!important;
+}
+#exchangeFields #addExchangeOfferBtn:hover,
+#exchangeFields .remove-offer:hover,
+#exchangeFields #removeExchangeWantImageBtn:hover{
+  background:#ccb099!important;
+}
+#exchangeFields .exchange-offer-row img,
+#exchangeFields .exchange-want-preview{
+  background:#f1e1d3!important;
+  border:1px solid #c7aa92!important;
+}
+</style>
+
+
+<style>
+/* 交換區新增視窗：桌機直接攤開，避免一直往下拉 */
+#productDialog.exchange-mode{
+  width:min(980px,calc(100% - 32px))!important;
+}
+#productDialog.exchange-mode form{
+  padding:22px!important;
+  gap:11px!important;
+}
+#productDialog.exchange-mode #exchangeFields{
+  grid-template-columns:minmax(0,1.35fr) minmax(280px,.85fr)!important;
+  align-items:start!important;
+  column-gap:16px!important;
+}
+#productDialog.exchange-mode #exchangeFields > div:first-child,
+#productDialog.exchange-mode #exchangeOfferEditor,
+#productDialog.exchange-mode #addExchangeOfferBtn{
+  grid-column:1;
+}
+#productDialog.exchange-mode #exchangeFields > label,
+#productDialog.exchange-mode #exchangeWantPreview,
+#productDialog.exchange-mode #removeExchangeWantImageBtn{
+  grid-column:2;
+}
+#productDialog.exchange-mode #exchangeFields > label:nth-of-type(1){
+  grid-row:1 / span 1;
+}
+#productDialog.exchange-mode #exchangeFields > label:nth-of-type(2){
+  grid-row:2 / span 1;
+}
+#productDialog.exchange-mode #exchangeWantPreview{
+  max-height:180px!important;
+  object-fit:contain!important;
+}
+#productDialog.exchange-mode .exchange-offer-row{
+  grid-template-columns:minmax(180px,1fr) minmax(220px,1fr) auto!important;
+  padding:10px!important;
+}
+#productDialog.exchange-mode .exchange-offer-row img{
+  width:72px!important;
+  height:72px!important;
+}
+#productDialog.exchange-mode .notice{
+  padding:8px 10px!important;
+  line-height:1.4!important;
+}
+
+/* 小螢幕才回到單欄；桌機不做內部捲動 */
+@media(min-width:701px){
+  #productDialog.exchange-mode{
+    overflow:visible!important;
+    max-height:none!important;
+  }
+  #productDialog.exchange-mode form{
+    overflow:visible!important;
+    max-height:none!important;
+  }
+}
+@media(max-width:700px){
+  #productDialog.exchange-mode{
+    width:calc(100% - 16px)!important;
+  }
+  #productDialog.exchange-mode #exchangeFields{
+    grid-template-columns:1fr!important;
+  }
+  #productDialog.exchange-mode #exchangeFields > *{
+    grid-column:1!important;
+    grid-row:auto!important;
+  }
+  #productDialog.exchange-mode .exchange-offer-row{
+    grid-template-columns:1fr auto!important;
+  }
+}
+</style>
+
+
+<style>
+/* 交換區不需要一般販售商品的進階欄位 */
+#productDialog.exchange-mode .variant-editor,
+#productDialog.exchange-mode .product-extra-options{
+  display:none!important;
+}
+/* 實體圖、展示影片都包在 variant-editor 裡，會一起隱藏 */
+</style>
+
+
+<style>
+/* 交換區改成一般商品一樣的直向長版：想要的放在我提供的下面 */
+#productDialog.exchange-mode{
+  width:min(620px,calc(100% - 28px))!important;
+}
+#productDialog.exchange-mode #exchangeFields{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:12px!important;
+}
+#productDialog.exchange-mode #exchangeFields > *{
+  grid-column:1!important;
+  grid-row:auto!important;
+}
+#productDialog.exchange-mode #exchangeOfferEditor{
+  width:100%!important;
+}
+#productDialog.exchange-mode .exchange-offer-row{
+  grid-template-columns:1fr!important;
+  gap:8px!important;
+}
+#productDialog.exchange-mode .exchange-offer-row .remove-offer{
+  width:100%!important;
+}
+#productDialog.exchange-mode .exchange-offer-row img{
+  width:100%!important;
+  height:auto!important;
+  max-height:220px!important;
+  object-fit:contain!important;
+}
+#productDialog.exchange-mode #addExchangeOfferBtn{
+  width:100%!important;
+}
+#productDialog.exchange-mode #exchangeWantPreview{
+  width:100%!important;
+  max-height:260px!important;
+  object-fit:contain!important;
 }
 </style>
 
@@ -1929,6 +2206,8 @@ function updateProductFormMode(){
 
   $("#stockFieldLabel").textContent=buy ? "需求數量" : exchange ? "可交換數量" : "庫存";
   $("#productPrice").placeholder=buy ? "例如：100 T" : "例如：80 糖";
+
+  $("#productDialog")?.classList.toggle("exchange-mode",exchange);
 
   const priceLabel=$("#productPrice")?.closest("label");
   const bulkAdmin=document.querySelector(".bulk-admin");
