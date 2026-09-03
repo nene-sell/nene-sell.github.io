@@ -830,6 +830,86 @@ dialog input:focus,dialog select:focus{border-color:#666}
 }
 </style>
 
+
+<style>
+/* ===== 交換區前台：外觀跟一般商品卡一致 ===== */
+.exchange-card{
+  background:linear-gradient(180deg,#141419,#0f0f13)!important;
+  border:1px solid var(--line)!important;
+  color:var(--text)!important;
+  border-radius:18px!important;
+}
+.exchange-card .card-body{
+  background:transparent!important;
+  color:var(--text)!important;
+}
+.exchange-card .badge{
+  background:transparent!important;
+  color:#aaa!important;
+  border:1px solid #33333b!important;
+}
+.exchange-card .exchange-side-label{
+  color:#aaa!important;
+}
+.exchange-card .exchange-side-name{
+  color:var(--text)!important;
+  font-weight:800!important;
+}
+.exchange-card .stock,
+.exchange-card .exchange-note{
+  color:var(--muted)!important;
+}
+.exchange-card .exchange-note{
+  border-top:1px solid var(--line)!important;
+}
+.exchange-card .exchange-side img,
+.exchange-card .exchange-offer-list img{
+  background:#1c1c22!important;
+  border:1px solid var(--line)!important;
+  border-radius:12px!important;
+}
+.exchange-card .exchange-arrow{
+  color:#aaa!important;
+}
+.exchange-card .admin-stock{
+  color:var(--text)!important;
+}
+.exchange-card .admin-stock input{
+  background:#1c1c22!important;
+  color:var(--text)!important;
+  border:1px solid #33333b!important;
+}
+.exchange-card .admin-stock button,
+.exchange-card .admin-actions button{
+  background:#1c1c22!important;
+  color:var(--text)!important;
+  border:1px solid #33333b!important;
+}
+.exchange-card .admin-actions .danger,
+.exchange-card .danger{
+  color:#ff9ba2!important;
+}
+/* 拿掉之前交換卡特有的米白/亮色覆寫 */
+.exchange-card .exchange-pair{
+  background:transparent!important;
+}
+</style>
+
+
+<style>
+/* 交換區標籤比照收購區；「我提供 / 想換」文字加深 */
+.exchange-card .badge{
+  background:#d8c2af!important;
+  color:#4f3b2e!important;
+  border:1px solid #a98b73!important;
+  font-weight:800!important;
+}
+.exchange-card .exchange-side-label{
+  color:#6b5140!important;
+  font-weight:900!important;
+}
+</style>
+
 </head>
 <body>
 <header class="topbar">
@@ -1638,7 +1718,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
           return `
           <div class="exchange-pair ${offers.length>1?"multi-offer":""}">
             <div>
-              <div class="exchange-side-label">我提供</div>
+              <div class="exchange-side-label">我要用下圖</div>
               <div class="exchange-offer-list">
                 ${offers.map(x=>`
                   <div class="exchange-side">
@@ -1650,7 +1730,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
             </div>
             <div class="exchange-arrow">⇄</div>
             <div class="exchange-side">
-              <div class="exchange-side-label">想換</div>
+              <div class="exchange-side-label">換這個</div>
               ${p.exchangeWantImageData?`<img src="${p.exchangeWantImageData}" alt="${esc(p.exchangeWantName||"想換的道具")}">`:""}
               ${p.exchangeWantName?`<div class="exchange-side-name">${esc(p.exchangeWantName)}</div>`:""}
             </div>
