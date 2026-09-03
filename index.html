@@ -532,7 +532,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
         <button type="button" data-category="作物限男">限男</button>
         <button type="button" data-category="作物限女">限女</button>
       </div>
-    </div><button class="tab" data-category="寵物">寵物</button><button class="tab" data-category="收購區">收購區</button>
+    </div><button class="tab" data-category="寵物">寵物</button><button class="tab" data-category="收購區">收購區</button><button class="tab" data-category="交換區">交換區</button>
   </nav>
 <section class="section-head">
     <div><h3 id="sectionTitle">全部商品</h3><p id="productCount">商品載入中… ♡</p></div>
@@ -578,6 +578,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
           </optgroup>
           <option value="寵物">寵物</option>
           <option value="收購區">收購區</option>
+          <option value="交換區">交換區</option>
         </select>
       </label>
       <label>價格
@@ -1443,7 +1444,7 @@ async function generateProductCatalogImage(selectedFile=null){
     btn.textContent="產生中…";
 
     const saleProducts=products.filter(p=>{
-      if(p.category==="收購區")return false;
+      if(p.category==="收購區" || p.category==="交換區")return false;
       const sold=p.status==="sold" || getStock(p)<=0;
       if(sold || p.status==="reserved")return false;
       return !!p.imageData;
