@@ -910,6 +910,21 @@ dialog input:focus,dialog select:focus{border-color:#666}
 }
 </style>
 
+
+<style>
+/* 交換標題放大、交換提示小字 */
+.exchange-card .exchange-side-label{
+  font-size:14px!important;
+  line-height:1.35!important;
+}
+.exchange-card .exchange-note{
+  font-size:11px!important;
+  text-align:center!important;
+  margin-top:10px!important;
+  padding-top:9px!important;
+}
+</style>
+
 </head>
 <body>
 <header class="topbar">
@@ -1768,7 +1783,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
             <button class="btn danger delete">刪除</button>
           </div>
         `:`
-          ${isExchange ? `<div class="exchange-note">有想交換的道具請截圖私訊我 ♡</div>` : `
+          ${isExchange ? `<div class="exchange-note">若要交換請私訊我DC</div>` : `
           ${variants.length
   ? `<div class="variant-picker"><span>款式</span><select class="variant-select">${variants.map(v=>`<option value="${esc(v.name)}" ${v.stock===0?"disabled":""}>${esc(v.name)}｜${isBuy?"需求":"庫存"} ${v.stock}</option>`).join("")}</select></div>`
   : `<div class="variant-picker variant-placeholder"><span>款式</span><select class="variant-select" disabled><option>無款式</option></select></div>`
