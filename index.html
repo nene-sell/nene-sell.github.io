@@ -777,6 +777,70 @@ let currentUser = null;
 let editingImage = "";
 let editingRealImage = "";
 let editingDemoVideoPath = "";
+
+let editingExchangeWantImage = "";
+let editingExchangeOffers = [];
+
+function normalizeExchangeOffers(p){
+  if(Array.isArray(p?.exchangeOffers) && p.exchangeOffers.length){
+    return p.exchangeOffers
+      .map(x=>({name:String(x?.name||"").trim(),imageData:String(x?.imageData||"")}))
+      .filter(x=>x.name || x.imageData);
+  }
+  // 相容舊的一對一交換資料
+  if(p?.category==="交換區" && (p?.name || p?.imageData)){
+    return [{name:String(p?.name||"").trim(),imageData:String(p?.imageData||"")}];
+  }
+  return [{name:"",imageData:""}];
+}
+
+function renderExchangeOfferEditor(){
+  const box=$("#exchangeOfferEditor");
+  if(!box)return;
+  if(!editingExchangeOffers.length) editingExchangeOffers=[{name:"",imageData:""}];
+  box.innerHTML="";
+
+  editingExchangeOffers.forEach((offer,index)=>{
+    const row=document.createElement("div");
+    row.className="exchange-offer-row";
+    row.innerHTML=`
+      <label>道具名稱
+        <input class="exchange-offer-name" maxlength="80" placeholder="例如：陽光樹彩虹" value="${esc(offer.name||"")}">
+      </label>
+      <label>道具圖片
+        <input class="exchange-offer-image" type="file" accept="image/*">
+      </label>
+      <button class="btn remove-offer" type="button" ${editingExchangeOffers.length===1?"disabled":""}>刪除</button>
+      ${offer.imageData?`<img src="${offer.imageData}" alt="提供道具預覽">`:""}
+    `;
+
+    row.querySelector(".exchange-offer-name").oninput=e=>{
+      editingExchangeOffers[index].name=e.target.value;
+    };
+
+    row.querySelector(".exchange-offer-image").onchange=async e=>{
+      const file=e.target.files?.[0];
+      if(!file)return;
+      $("#productError").textContent="提供道具圖片處理中…";
+      try{
+        editingExchangeOffers[index].imageData=await compressImage(file);
+        $("#productError").textContent="";
+        renderExchangeOfferEditor();
+      }catch(err){
+        $("#productError").textContent=err.message||"圖片處理失敗";
+      }
+    };
+
+    row.querySelector(".remove-offer").onclick=()=>{
+      if(editingExchangeOffers.length<=1)return;
+      editingExchangeOffers.splice(index,1);
+      renderExchangeOfferEditor();
+    };
+
+    box.appendChild(row);
+  });
+}
+
 let cart = [];
 let offerCart = [];
 
@@ -1899,7 +1963,7 @@ function openProduct(p=null){
   loadVariantRows(p);
   $("#productImage").value="";
   editingImage=p?.imageData||"";
-  editingExchangeOffers=normalizeExchangeOffers(p);
+  editingExchangeOffers=(p?.category==="交換區") ? normalizeExchangeOffers(p) : [{name:"",imageData:""}];
   renderExchangeOfferEditor();
   editingExchangeWantImage=p?.exchangeWantImageData||"";
   $("#exchangeWantName").value=p?.exchangeWantName||"";
