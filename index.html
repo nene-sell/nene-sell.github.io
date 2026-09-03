@@ -809,6 +809,27 @@ dialog input:focus,dialog select:focus{border-color:#666}
 }
 </style>
 
+
+<style>
+/* 交換區：儲存鍵固定在畫面底部，新增再多道具都按得到 */
+#productDialog.exchange-mode #saveProductBtn{
+  position:fixed!important;
+  left:50%!important;
+  bottom:18px!important;
+  transform:translateX(-50%)!important;
+  width:min(560px,calc(100vw - 36px))!important;
+  z-index:9999!important;
+  box-shadow:0 8px 24px rgba(75,55,42,.24)!important;
+}
+#productDialog.exchange-mode #productForm{
+  padding-bottom:86px!important;
+}
+/* 交換區不需要這段圖片儲存提示，順便縮短表單 */
+#productDialog.exchange-mode .notice{
+  display:none!important;
+}
+</style>
+
 </head>
 <body>
 <header class="topbar">
