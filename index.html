@@ -1996,9 +1996,26 @@ $("#productCount").textContent=`${list.length} 件商品`;
       const variantSelect=card.querySelector(".variant-select");
       if(variantSelect){
         variantSelect.value=defaultVariant;
+
+        const updateVariantCardImage=()=>{
+          const selectedVariant=getVariants(p).find(v=>v.name===variantSelect.value);
+          const cardImg=card.querySelector(".card-media img");
+          if(cardImg){
+            // 該款式有單獨圖片就顯示款式圖；沒有就回到商品主圖。
+            cardImg.src=selectedVariant?.imageData || p.imageData || "";
+            cardImg.alt=selectedVariant?.imageData
+              ? `${p.name}－${selectedVariant.name}`
+              : p.name;
+          }
+        };
+
         variantSelect.onchange=()=>{
           const lim=variantStock(p,variantSelect.value);
-          qtyInput.max=lim; qtyInput.value=1; qtyInput.disabled=lim===0; addBtn.disabled=lim===0;
+          qtyInput.max=lim;
+          qtyInput.value=1;
+          qtyInput.disabled=lim===0;
+          addBtn.disabled=lim===0;
+          updateVariantCardImage();
         };
       }
       if(addBtn)addBtn.onclick=()=>{
