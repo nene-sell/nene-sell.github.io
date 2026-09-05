@@ -2119,10 +2119,21 @@ function catalogVariantRows(p){
 
 function catalogWrapVariantLines(ctx, rows, maxWidth){
   if(!rows.length)return [];
+
+  // 不同價時，每個款式獨立一段並保留價格，避免 6 欄販售圖縮小後看不清楚。
+  const hasDifferentPrices=rows.some(v=>v.showPrice);
   const parts=rows.map(v=>{
     const base=v.qty===null ? v.name : `${v.name} ×${v.qty}`;
-    return v.showPrice && v.price ? `${base}｜${v.price}` : base;
+    if(hasDifferentPrices && v.price){
+      const parsed=parsePrice(v.price);
+      const shortPrice=parsed.amount!==null
+        ? `${neatNum(parsed.amount)}${parsed.unit?` ${parsed.unit}`:""}`
+        : v.price;
+      return `${base}・${shortPrice}`;
+    }
+    return base;
   });
+
   const lines=[];
   let line="";
   for(const part of parts){
@@ -2376,8 +2387,8 @@ async function generateProductCatalogImage(selectedFile=null){
 
             if(variantLines.length){
               ctx.textAlign="center";
-              ctx.fillStyle="#75665e";
-              ctx.font='600 12px Arial,"Microsoft JhengHei",sans-serif';
+              ctx.fillStyle="#5f4b40";
+              ctx.font='700 13px Arial,"Microsoft JhengHei",sans-serif';
               variantLines.forEach((line,li)=>{
                 ctx.fillText(line,x+cardW/2,cy+baseCardH+13+li*variantLineH);
               });
