@@ -2338,9 +2338,17 @@ async function generateProductCatalogImage(selectedFile=null){
             const catalogStock=getStock(p);
             const priceText=productDisplayPrice(p);
             const stockText=`×${catalogStock}`;
+            const hasFromSuffix=priceText.endsWith("起");
+            const priceMain=hasFromSuffix ? priceText.slice(0,-1) : priceText;
 
             ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
-            const priceW=ctx.measureText(priceText).width;
+            const priceMainW=ctx.measureText(priceMain).width;
+            let fromW=0;
+            if(hasFromSuffix){
+              ctx.font='600 12px Arial,"Microsoft JhengHei",sans-serif';
+              fromW=ctx.measureText("起").width+3;
+            }
+            const priceW=priceMainW+fromW;
             ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
             const stockW=ctx.measureText(stockText).width;
             const spacing=8;
@@ -2350,8 +2358,17 @@ async function generateProductCatalogImage(selectedFile=null){
             ctx.textAlign="left";
             ctx.fillStyle="#b66f59";
             ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
-            ctx.fillText(priceText,tx,cy+imageH+44);
-            tx+=priceW+spacing;
+            ctx.fillText(priceMain,tx,cy+imageH+44);
+            tx+=priceMainW;
+            if(hasFromSuffix){
+              ctx.save();
+              ctx.globalAlpha=.62;
+              ctx.font='600 12px Arial,"Microsoft JhengHei",sans-serif';
+              ctx.fillText("起",tx+3,cy+imageH+44);
+              ctx.restore();
+              tx+=fromW;
+            }
+            tx+=spacing;
 
             ctx.fillStyle="#75665e";
             ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
