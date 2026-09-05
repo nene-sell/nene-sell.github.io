@@ -1380,8 +1380,7 @@ function getVariants(p){
         .map(v=>({
           name:String(v?.name||"").trim(),
           stock:Math.max(0,Math.floor(Number(v?.stock)||0)),
-          imageData:String(v?.imageData||""),
-          price:String(v?.price??"").trim()
+          imageData:String(v?.imageData||"")
         }))
         .filter(v=>v.name)
     : [];
@@ -1399,31 +1398,6 @@ function getStock(p){
 function variantStock(p,name){
   const v=getVariants(p).find(x=>x.name===name);
   return v ? v.stock : 0;
-}
-
-function variantPriceText(p,name){
-  const v=getVariants(p).find(x=>x.name===name);
-  return (v?.price||"").trim() || String(p?.price||"").trim();
-}
-
-function productDisplayPrice(p){
-  const vs=getVariants(p);
-  if(!vs.length)return String(p?.price||"").trim();
-  const prices=vs.map(v=>variantPriceText(p,v.name)).filter(Boolean);
-  if(!prices.length)return String(p?.price||"").trim();
-  const parsed=prices.map(parsePrice);
-  const units=new Set(parsed.map(x=>x.unit));
-  const nums=parsed.map(x=>x.amount);
-  if(units.size===1 && nums.every(x=>x!==null)){
-    const unique=[...new Set(nums)];
-    if(unique.length>1){
-      const min=Math.min(...nums);
-      const unit=parsed[0].unit;
-      return `${neatNum(min)}${unit?` ${unit}`:""}起`;
-    }
-    return prices[0];
-  }
-  return String(p?.price||prices[0]||"").trim();
 }
 
 function parsePrice(price){
@@ -1547,8 +1521,7 @@ function renderCart(){
     if(item.qty<1)return;
 
     totalCount+=item.qty;
-    const selectedPriceText=vs.length ? variantPriceText(p,item.variant||"") : String(p.price||"");
-    const parsed=parsePrice(selectedPriceText);
+    const parsed=parsePrice(p.price);
     const sameProductQty=!buy
       ? list.filter(x=>x.id===item.id).reduce((sum,x)=>sum+(Number(x.qty)||0),0)
       : Number(item.qty)||0;
@@ -1578,7 +1551,7 @@ function renderCart(){
       const amount=parsed.amount*item.qty;
       lineTotal=`${neatNum(amount)}${parsed.unit?` ${esc(parsed.unit)}`:""}`;
     }else{
-      lineTotal=esc(selectedPriceText);
+      lineTotal=esc(p.price);
     }
 
     const selectedCartVariant = item.variant
@@ -1881,7 +1854,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
           </div>`;
         })() : ""}
         <div class="card-title">${esc(p.name)}</div>
-        ${!isExchange?`<div class="price">${isBuy?"收購價：":""}${(()=>{const t=productDisplayPrice(p);return t.endsWith("起")?`${esc(t.slice(0,-1))}<span class="price-from">起</span>`:esc(t)})()}</div>`:""}
+        ${!isExchange?`<div class="price">${isBuy?"收購價：":""}${esc(p.price)}</div>`:""}
         ${!isBuy&&bulkDeal(p)?`<div class="bulk-deal">${esc((p.discountText||"").trim()||"任選")} ${bulkDeal(p).qty} 個總額 ${neatNum(bulkDeal(p).price)}${priceParts(p.price)?.unit?` ${esc(priceParts(p.price).unit)}`:""}</div>${dealHintText(p)?`<div class="deal-next-hint">${dealHintText(p)}</div>`:""}`:""}
         <div class="stock ${limit===0?"out":limit<=2?"low":""}">${statusText}</div>
 
@@ -1914,7 +1887,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
         `:`
           ${isExchange ? `<div class="exchange-note">若要交換請私訊我DC</div>` : `
           ${variants.length
-  ? `<div class="variant-picker"><span>款式</span><select class="variant-select">${variants.map(v=>`<option value="${esc(v.name)}" ${v.stock===0?"disabled":""}>${esc(v.name)}${v.price?`｜${esc(v.price)}`:""}｜${isBuy?"需求":"庫存"} ${v.stock}</option>`).join("")}</select></div>`
+  ? `<div class="variant-picker"><span>款式</span><select class="variant-select">${variants.map(v=>`<option value="${esc(v.name)}" ${v.stock===0?"disabled":""}>${esc(v.name)}｜${isBuy?"需求":"庫存"} ${v.stock}</option>`).join("")}</select></div>`
   : `<div class="variant-picker variant-placeholder"><span>款式</span><select class="variant-select" disabled><option>無款式</option></select></div>`
 }
           <div class="buy-actions ${isBuy?"offer-actions":""}">
@@ -2048,11 +2021,6 @@ $("#productCount").textContent=`${list.length} 件商品`;
           qtyInput.disabled=lim===0;
           addBtn.disabled=lim===0;
           updateVariantCardImage();
-          const priceEl=card.querySelector(".price");
-          if(priceEl){
-            const chosen=variantPriceText(p,variantSelect.value);
-            priceEl.textContent=(isBuy?"收購價：":"")+chosen;
-          }
         };
       }
       if(addBtn)addBtn.onclick=()=>{
@@ -2105,35 +2073,17 @@ function catalogVariantRows(p){
   const raw = Array.isArray(p?.variants) ? p.variants :
               Array.isArray(p?.styles) ? p.styles :
               Array.isArray(p?.options) ? p.options : [];
-  const rows=raw.map(v=>{
-    if(typeof v==="string") return {name:v,qty:null,price:""};
+  return raw.map(v=>{
+    if(typeof v==="string") return {name:v,qty:null};
     const name=String(v?.name ?? v?.label ?? v?.title ?? v?.variant ?? "").trim();
     const q=Number(v?.stock ?? v?.qty ?? v?.quantity);
-    const price=String(v?.price??"").trim() || String(p?.price||"").trim();
-    return {name,qty:Number.isFinite(q)?q:null,price};
+    return {name,qty:Number.isFinite(q)?q:null};
   }).filter(v=>v.name);
-  const distinct=[...new Set(rows.map(v=>v.price).filter(Boolean))];
-  const showPrices=distinct.length>1;
-  return rows.map(v=>({...v,showPrice:showPrices}));
 }
 
 function catalogWrapVariantLines(ctx, rows, maxWidth){
   if(!rows.length)return [];
-
-  // 不同價時，每個款式獨立一段並保留價格，避免 6 欄販售圖縮小後看不清楚。
-  const hasDifferentPrices=rows.some(v=>v.showPrice);
-  const parts=rows.map(v=>{
-    const base=v.qty===null ? v.name : `${v.name} ×${v.qty}`;
-    if(hasDifferentPrices && v.price){
-      const parsed=parsePrice(v.price);
-      const shortPrice=parsed.amount!==null
-        ? `${neatNum(parsed.amount)}${parsed.unit?` ${parsed.unit}`:""}`
-        : v.price;
-      return `${base}・${shortPrice}`;
-    }
-    return base;
-  });
-
+  const parts=rows.map(v=>v.qty===null ? v.name : `${v.name} ×${v.qty}`);
   const lines=[];
   let line="";
   for(const part of parts){
@@ -2347,19 +2297,11 @@ async function generateProductCatalogImage(selectedFile=null){
             ctx.fillText(catalogFitText(ctx,p.name,cardW-10),x+cardW/2,cy+imageH+20);
 
             const catalogStock=getStock(p);
-            const priceText=productDisplayPrice(p);
+            const priceText=String(p.price||"");
             const stockText=`×${catalogStock}`;
-            const hasFromSuffix=priceText.endsWith("起");
-            const priceMain=hasFromSuffix ? priceText.slice(0,-1) : priceText;
 
             ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
-            const priceMainW=ctx.measureText(priceMain).width;
-            let fromW=0;
-            if(hasFromSuffix){
-              ctx.font='600 12px Arial,"Microsoft JhengHei",sans-serif';
-              fromW=ctx.measureText("起").width+3;
-            }
-            const priceW=priceMainW+fromW;
+            const priceW=ctx.measureText(priceText).width;
             ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
             const stockW=ctx.measureText(stockText).width;
             const spacing=8;
@@ -2369,17 +2311,8 @@ async function generateProductCatalogImage(selectedFile=null){
             ctx.textAlign="left";
             ctx.fillStyle="#b66f59";
             ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
-            ctx.fillText(priceMain,tx,cy+imageH+44);
-            tx+=priceMainW;
-            if(hasFromSuffix){
-              ctx.save();
-              ctx.globalAlpha=.62;
-              ctx.font='600 12px Arial,"Microsoft JhengHei",sans-serif';
-              ctx.fillText("起",tx+3,cy+imageH+44);
-              ctx.restore();
-              tx+=fromW;
-            }
-            tx+=spacing;
+            ctx.fillText(priceText,tx,cy+imageH+44);
+            tx+=priceW+spacing;
 
             ctx.fillStyle="#75665e";
             ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
@@ -2387,8 +2320,8 @@ async function generateProductCatalogImage(selectedFile=null){
 
             if(variantLines.length){
               ctx.textAlign="center";
-              ctx.fillStyle="#5f4b40";
-              ctx.font='700 13px Arial,"Microsoft JhengHei",sans-serif';
+              ctx.fillStyle="#75665e";
+              ctx.font='600 12px Arial,"Microsoft JhengHei",sans-serif';
               variantLines.forEach((line,li)=>{
                 ctx.fillText(line,x+cardW/2,cy+baseCardH+13+li*variantLineH);
               });
@@ -2465,13 +2398,12 @@ async function compressImage(file){
   return out;
 }
 
-function addVariantRow(name="",stock=0,imageData="",price=""){
+function addVariantRow(name="",stock=0,imageData=""){
   const row=document.createElement("div"); row.className="variant-row";
   row.dataset.imageData=imageData||"";
   row.innerHTML=`
     <input class="variant-name" placeholder="例如：黑色" value="${esc(name)}">
     <input class="variant-stock-input" type="number" min="0" step="1" value="${Math.max(0,Math.floor(Number(stock)||0))}">
-    <input class="variant-price-input" placeholder="款式價格（留空=商品價）" value="${esc(price)}">
     <label class="variant-image-btn" title="款式圖片（選填）">
       <span>圖片</span>
       <input class="variant-image-input" type="file" accept="image/*">
@@ -2495,12 +2427,11 @@ function addVariantRow(name="",stock=0,imageData="",price=""){
   };
   $("#variantRows").appendChild(row);
 }
-function loadVariantRows(p){$("#variantRows").innerHTML="";getVariants(p).forEach(v=>addVariantRow(v.name,v.stock,v.imageData||"",v.price||""));}
+function loadVariantRows(p){$("#variantRows").innerHTML="";getVariants(p).forEach(v=>addVariantRow(v.name,v.stock,v.imageData||""));}
 function collectVariants(){return $$(".variant-row",$("#variantRows")).map(r=>({
   name:r.querySelector(".variant-name").value.trim(),
   stock:Math.max(0,Math.floor(Number(r.querySelector(".variant-stock-input").value)||0)),
-  imageData:r.dataset.imageData||"",
-  price:r.querySelector(".variant-price-input")?.value.trim()||""
+  imageData:r.dataset.imageData||""
 })).filter(v=>v.name);}
 
 function updateProductFormMode(){
@@ -4806,22 +4737,4 @@ main.wrap{
 .catalog-picker-grid button:hover,.catalog-picker-cancel:hover{background:#efe1d8}
 .catalog-picker-grid .catalog-all{grid-column:1/-1;background:#765d50;color:white;border-color:#765d50}
 .catalog-picker-cancel{display:block;width:100%;margin-top:9px;background:white}
-</style>
-
-<style>
-/* 款式可設定獨立價格 */
-.variant-row{grid-template-columns:minmax(110px,1.15fr) 86px minmax(135px,1fr) auto 46px auto!important}
-.variant-price-input{min-width:0}
-@media(max-width:600px){
-  .variant-row{grid-template-columns:1fr 78px!important}
-  .variant-row .variant-price-input{grid-column:1/-1}
-}
-</style>
-
-<style>
-.price-from{
-  font-size:.68em;
-  font-weight:600;
-  margin-left:2px;
-}
 </style>
