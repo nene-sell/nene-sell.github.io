@@ -1554,8 +1554,13 @@ function renderCart(){
       lineTotal=esc(p.price);
     }
 
+    const selectedCartVariant = item.variant
+      ? getVariants(p).find(v=>v.name===item.variant)
+      : null;
+    const cartImage = selectedCartVariant?.imageData || p.imageData || "";
+
     row.innerHTML=`
-      <img src="${p.imageData||""}" alt="${esc(p.name)}">
+      <img src="${cartImage}" alt="${esc(item.variant ? `${p.name}－${item.variant}` : p.name)}">
       <div class="cart-item-info">
         <div class="cart-item-name">${esc(p.name)}${item.variant?` <span class="cart-variant">｜${esc(item.variant)}</span>`:""}</div>
         <div class="cart-item-meta">${buy?"收購價：":""}${esc(p.price)} × ${item.qty}${!buy&&deal&&isFirstSameProduct&&groupDiscounted&&sameProductQty>=deal.qty?`　<span class="deal-applied">${esc((p.discountText||"").trim()||"任選")} ${sameProductQty} 個・總額 ${neatNum(groupDiscounted.amount)}${groupDiscounted.unit?` ${esc(groupDiscounted.unit)}`:""}</span>`:""}${!buy&&deal&&isFirstSameProduct&&sameProductQty>0&&(sameProductQty%deal.qty)!==0?`　<span class="deal-next-cart">再買 ${deal.qty-(sameProductQty%deal.qty)} 個享優惠 ♡</span>`:""}</div>
