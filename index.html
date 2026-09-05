@@ -1419,7 +1419,7 @@ function productDisplayPrice(p){
     if(unique.length>1){
       const min=Math.min(...nums);
       const unit=parsed[0].unit;
-      return `${neatNum(min)}${unit?` ${unit}`:""}<span class="price-from">起</span>`;
+      return `${neatNum(min)}${unit?` ${unit}`:""}起`;
     }
     return prices[0];
   }
@@ -1881,7 +1881,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
           </div>`;
         })() : ""}
         <div class="card-title">${esc(p.name)}</div>
-        ${!isExchange?`<div class="price">${isBuy?"收購價：":""}${esc(productDisplayPrice(p))}</div>`:""}
+        ${!isExchange?`<div class="price">${isBuy?"收購價：":""}${(()=>{const t=productDisplayPrice(p);return t.endsWith("起")?`${esc(t.slice(0,-1))}<span class="price-from">起</span>`:esc(t)})()}</div>`:""}
         ${!isBuy&&bulkDeal(p)?`<div class="bulk-deal">${esc((p.discountText||"").trim()||"任選")} ${bulkDeal(p).qty} 個總額 ${neatNum(bulkDeal(p).price)}${priceParts(p.price)?.unit?` ${esc(priceParts(p.price).unit)}`:""}</div>${dealHintText(p)?`<div class="deal-next-hint">${dealHintText(p)}</div>`:""}`:""}
         <div class="stock ${limit===0?"out":limit<=2?"low":""}">${statusText}</div>
 
@@ -4795,6 +4795,5 @@ main.wrap{
   font-size:.68em;
   font-weight:600;
   margin-left:2px;
-  vertical-align:baseline;
 }
 </style>
