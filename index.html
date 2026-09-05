@@ -1419,7 +1419,7 @@ function productDisplayPrice(p){
     if(unique.length>1){
       const min=Math.min(...nums);
       const unit=parsed[0].unit;
-      return `${neatNum(min)}${unit?` ${unit}`:""}起`;
+      return `${neatNum(min)}${unit?` ${unit}`:""}<span class="price-from">起</span>`;
     }
     return prices[0];
   }
@@ -4787,5 +4787,14 @@ main.wrap{
 @media(max-width:600px){
   .variant-row{grid-template-columns:1fr 78px!important}
   .variant-row .variant-price-input{grid-column:1/-1}
+}
+</style>
+
+<style>
+.price-from{
+  font-size:.68em;
+  font-weight:600;
+  margin-left:2px;
+  vertical-align:baseline;
 }
 </style>
