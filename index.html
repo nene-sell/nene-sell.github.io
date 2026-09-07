@@ -1115,6 +1115,12 @@ dialog input:focus,dialog select:focus{border-color:#666}
       <label>價格
         <input id="productPrice" placeholder="例如：80 糖" required maxlength="40">
       </label>
+      <div class="offer-price-admin">
+        <label class="offer-price-toggle"><input id="productBuyerOffer" type="checkbox"> 買家自出價格</label>
+        <label id="minimumOfferField" class="hidden">最低接受價（選填）
+          <input id="productMinimumOffer" placeholder="例如：100 糖；留空＝不限" maxlength="40">
+        </label>
+      </div>
       <div class="bulk-admin">
         <label>優惠數量<input id="discountQty" type="number" min="2" step="1" placeholder="例如：3"></label>
         <label>優惠總價<input id="discountPrice" type="number" min="0" step="0.01" placeholder="例如：210"></label>
@@ -1522,7 +1528,8 @@ function renderCart(){
     if(item.qty<1)return;
 
     totalCount+=item.qty;
-    const parsed=parsePrice(p.price);
+    const effectivePrice=(!buy && isBuyerOfferProduct(p) && item.offerPrice) ? item.offerPrice : p.price;
+    const parsed=parsePrice(effectivePrice);
     const sameProductQty=!buy
       ? list.filter(x=>x.id===item.id).reduce((sum,x)=>sum+(Number(x.qty)||0),0)
       : Number(item.qty)||0;
@@ -1564,7 +1571,7 @@ function renderCart(){
       <img src="${cartImage}" alt="${esc(item.variant ? `${p.name}－${item.variant}` : p.name)}">
       <div class="cart-item-info">
         <div class="cart-item-name">${esc(p.name)}${item.variant?` <span class="cart-variant">｜${esc(item.variant)}</span>`:""}</div>
-        <div class="cart-item-meta">${buy?"收購價：":""}${esc(p.price)} × ${item.qty}${!buy&&deal&&isFirstSameProduct&&groupDiscounted&&sameProductQty>=deal.qty?`　<span class="deal-applied">${esc((p.discountText||"").trim()||"任選")} ${sameProductQty} 個・總額 ${neatNum(groupDiscounted.amount)}${groupDiscounted.unit?` ${esc(groupDiscounted.unit)}`:""}</span>`:""}${!buy&&deal&&isFirstSameProduct&&sameProductQty>0&&(sameProductQty%deal.qty)!==0?`　<span class="deal-next-cart">再買 ${deal.qty-(sameProductQty%deal.qty)} 個享優惠 ♡</span>`:""}</div>
+        <div class="cart-item-meta">${buy?"收購價：":isBuyerOfferProduct(p)?"買家出價：":""}${esc(effectivePrice)} × ${item.qty}${!buy&&deal&&isFirstSameProduct&&groupDiscounted&&sameProductQty>=deal.qty?`　<span class="deal-applied">${esc((p.discountText||"").trim()||"任選")} ${sameProductQty} 個・總額 ${neatNum(groupDiscounted.amount)}${groupDiscounted.unit?` ${esc(groupDiscounted.unit)}`:""}</span>`:""}${!buy&&deal&&isFirstSameProduct&&sameProductQty>0&&(sameProductQty%deal.qty)!==0?`　<span class="deal-next-cart">再買 ${deal.qty-(sameProductQty%deal.qty)} 個享優惠 ♡</span>`:""}</div>
       </div>
       <div class="cart-line-total">${lineTotal}</div>
       <div class="cart-item-controls">
@@ -1736,6 +1743,24 @@ function bulkTotal(p,qty){
   return {amount:sets*deal.price+rest*base.amount,unit:base.unit};
 }
 function neatNum(n){ return Number.isInteger(n)?String(n):String(Math.round(n*100)/100); }
+function isBuyerOfferProduct(p){ return !!p?.buyerOffer; }
+function productPriceLabel(p){ return isBuyerOfferProduct(p) ? "自出價" : String(p?.price||""); }
+function validateBuyerOffer(p,value){
+  const raw=String(value||"").trim();
+  const parsed=parsePrice(raw);
+  if(!raw || parsed.amount===null || parsed.amount<=0)return {ok:false,message:"請輸入出價，例如：120 糖"};
+  const minimum=String(p?.minimumOffer||"").trim();
+  if(minimum){
+    const minParsed=parsePrice(minimum);
+    if(minParsed.amount!==null){
+      if(minParsed.unit && parsed.unit && minParsed.unit.toLowerCase()!==parsed.unit.toLowerCase()){
+        return {ok:false,message:`最低接受價是 ${minimum}，請使用相同單位`};
+      }
+      if(parsed.amount<minParsed.amount)return {ok:false,message:`最低接受價是 ${minimum}`};
+    }
+  }
+  return {ok:true,value:raw};
+}
 function saleQtyAllVariants(id){
   return cart.filter(x=>x.id===id).reduce((s,x)=>s+(Number(x.qty)||0),0);
 }
@@ -1902,8 +1927,8 @@ $("#productCount").textContent=`${list.length} 件商品`;
                 : limit===0
                 ? (isBuy?"已收齊":"售完")
                 : selectedQty>0
-                  ? (isBuy?"更新出售清單":"更新清單")
-                  : (isBuy?"我有這個":"加入清單")
+                  ? (isBuy?"更新出售清單":isBuyerOfferProduct(p)?"重新出價":"更新清單")
+                  : (isBuy?"我有這個":isBuyerOfferProduct(p)?"我要出價":"加入清單")
             }</button>
           </div>
           `}
@@ -2027,7 +2052,24 @@ $("#productCount").textContent=`${list.length} 件商品`;
       if(addBtn)addBtn.onclick=()=>{
         if(sold){toast("此商品已售完");return;}
         if(reserved){toast("此商品已預訂");return;}
+        let buyerOfferValue="";
+        if(!isBuy && isBuyerOfferProduct(p)){
+          const existingOffer=cart.find(x=>x.id===p.id && String(x.variant||"")===String(variantSelect?.value||""))?.offerPrice||"";
+          const answer=prompt(
+            p.minimumOffer ? `請輸入你的出價（最低 ${p.minimumOffer}）` : "請輸入你的出價",
+            existingOffer
+          );
+          if(answer===null)return;
+          const checked=validateBuyerOffer(p,answer);
+          if(!checked.ok){ toast(checked.message); return; }
+          buyerOfferValue=checked.value;
+        }
         addToList(p,qtyInput?.value||1,isBuy?"buy":"sale",variantSelect?.value||"");
+        if(buyerOfferValue){
+          const target=cart.find(x=>x.id===p.id && String(x.variant||"")===String(variantSelect?.value||""));
+          if(target)target.offerPrice=buyerOfferValue;
+          renderCart();
+        }
         render();
       };
     }
@@ -2303,7 +2345,7 @@ async function generateProductCatalogImage(selectedFile=null){
             ctx.fillText(catalogFitText(ctx,p.name,cardW-10),x+cardW/2,cy+imageH+20);
 
             const catalogStock=getStock(p);
-            const priceText=String(p.price||"");
+            const priceText=productPriceLabel(p);
             const stockText=`×${catalogStock}`;
 
             ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
@@ -2446,15 +2488,17 @@ function updateProductFormMode(){
   const exchange=category==="交換區";
 
   $("#stockFieldLabel").textContent=buy ? "需求數量" : exchange ? "可交換數量" : "庫存";
-  $("#productPrice").placeholder=buy ? "例如：100 T" : "例如：80 糖";
+  const buyerOffer=!!$("#productBuyerOffer")?.checked && !buy && !exchange;
+  $("#productPrice").placeholder=buy ? "例如：100 T" : buyerOffer ? "自出價商品可留空" : "例如：80 糖";
+  $("#minimumOfferField")?.classList.toggle("hidden",!buyerOffer);
+  if($("#productPrice")) $("#productPrice").required=!exchange && !buyerOffer;
+  const bulkAdmin=document.querySelector(".bulk-admin");
+  if(bulkAdmin) bulkAdmin.style.display=(exchange||buyerOffer) ? "none" : "";
 
   $("#productDialog")?.classList.toggle("exchange-mode",exchange);
 
   const priceLabel=$("#productPrice")?.closest("label");
-  const bulkAdmin=document.querySelector(".bulk-admin");
   if(priceLabel) priceLabel.style.display=exchange ? "none" : "";
-  if(bulkAdmin) bulkAdmin.style.display=exchange ? "none" : "";
-  $("#productPrice").required=!exchange;
 
   $("#exchangeFields")?.classList.toggle("show",exchange);
   const normalNameLabel=$("#productName")?.closest("label");
@@ -2473,6 +2517,8 @@ function openProduct(p=null){
   $("#productCategory").value=p?.category||"家具";
   $("#productName").value=p?.name||"";
   $("#productPrice").value=p?.price||"";
+  if($("#productBuyerOffer")) $("#productBuyerOffer").checked=!!p?.buyerOffer;
+  if($("#productMinimumOffer")) $("#productMinimumOffer").value=p?.minimumOffer||"";
   updateProductFormMode();
   $("#discountQty").value=p?.discountQty||"";
   $("#discountPrice").value=p?.discountPrice??"";
@@ -2688,7 +2734,9 @@ $("#productForm").addEventListener("submit", async e=>{
     const payload={
       category:$("#productCategory").value,
       name:isExchange ? cleanExchangeOffers[0].name : $("#productName").value.trim(),
-      price:isExchange ? "交換" : $("#productPrice").value.trim(),
+      price:isExchange ? "交換" : ($("#productBuyerOffer")?.checked ? "自出價" : $("#productPrice").value.trim()),
+      buyerOffer:!isExchange && $("#productCategory").value!=="收購區" && !!$("#productBuyerOffer")?.checked,
+      minimumOffer:$("#productBuyerOffer")?.checked ? ($("#productMinimumOffer")?.value||"").trim() : "",
       discountQty:(()=>{
         const q=parseInt($("#discountQty").value||"",10), d=$("#discountPrice").value;
         return Number.isInteger(q)&&q>=2&&d!==""&&Number.isFinite(Number(d)) ? q : null;
@@ -4778,4 +4826,30 @@ main.wrap{
 @media (prefers-reduced-motion:reduce){
   .limited-mini{animation:none}
 }
+</style>$("#productBuyerOffer").onchange=updateProductFormMode;
+
+
+<style>
+.offer-price-admin{
+  display:grid;
+  gap:8px;
+  padding:10px 11px;
+  border:1px solid #c8ad98;
+  border-radius:12px;
+  background:#efe0d4;
+}
+.offer-price-toggle{
+  display:flex!important;
+  align-items:center;
+  gap:8px;
+  font-weight:900;
+  color:#59463b;
+  cursor:pointer;
+}
+.offer-price-toggle input{
+  width:17px;
+  height:17px;
+  accent-color:#9b7156;
+}
+#minimumOfferField input{margin-top:6px}
 </style>
