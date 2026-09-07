@@ -1062,7 +1062,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
         <button type="button" data-category="作物限男">限男</button>
         <button type="button" data-category="作物限女">限女</button>
       </div>
-    </div><button class="tab" data-category="寵物">寵物</button><button class="tab" data-category="收購區">收購區</button><button class="tab" data-category="交換區">交換區</button>
+    </div><button class="tab" data-category="寵物">寵物</button><button class="tab special-sale-tab" data-category="特價區">特價區 <span class="limited-mini">限時</span></button><button class="tab" data-category="收購區">收購區</button><button class="tab" data-category="交換區">交換區</button>
   </nav>
 <section class="section-head">
     <div><h3 id="sectionTitle">全部商品</h3><p id="productCount">商品載入中… ♡</p></div>
@@ -1107,6 +1107,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
             <option value="作物限女">限女</option>
           </optgroup>
           <option value="寵物">寵物</option>
+          <option value="特價區">特價區</option>
           <option value="收購區">收購區</option>
           <option value="交換區">交換區</option>
         </select>
@@ -2157,6 +2158,11 @@ async function generateProductCatalogImage(selectedFile=null){
         file:"寵物",
         title:"寵物",
         sections:[{label:"寵物",match:p=>String(p.category||"")==="寵物"}]
+      },
+      {
+        file:"特價區",
+        title:"特價區",
+        sections:[{label:"特價區",match:p=>String(p.category||"")==="特價區"}]
       }
     ];
 
@@ -2801,6 +2807,7 @@ function openCatalogPicker(){
         <button data-cat="戒指">戒指</button>
         <button data-cat="作物">作物</button>
         <button data-cat="寵物">寵物</button>
+        <button data-cat="特價區">特價區</button>
         <button class="catalog-all" data-cat="">全部產生</button>
       </div>
       <button class="catalog-picker-cancel">取消</button>
@@ -4737,4 +4744,38 @@ main.wrap{
 .catalog-picker-grid button:hover,.catalog-picker-cancel:hover{background:#efe1d8}
 .catalog-picker-grid .catalog-all{grid-column:1/-1;background:#765d50;color:white;border-color:#765d50}
 .catalog-picker-cancel{display:block;width:100%;margin-top:9px;background:white}
+</style>
+
+<style>
+/* === 特價區：小型「限時」跳動標示 === */
+.special-sale-tab{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.limited-mini{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:2px 5px;
+  border-radius:999px;
+  background:#b9795d;
+  color:#fffaf6;
+  font-size:8px;
+  line-height:1.2;
+  font-weight:900;
+  letter-spacing:.06em;
+  box-shadow:0 2px 5px rgba(91,61,45,.16);
+  animation:limitedMiniBounce 1.8s ease-in-out infinite;
+  transform-origin:center bottom;
+}
+@keyframes limitedMiniBounce{
+  0%,72%,100%{transform:translateY(0)}
+  80%{transform:translateY(-3px)}
+  88%{transform:translateY(0)}
+  94%{transform:translateY(-1px)}
+}
+@media (prefers-reduced-motion:reduce){
+  .limited-mini{animation:none}
+}
 </style>
