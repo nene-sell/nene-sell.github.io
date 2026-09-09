@@ -1022,6 +1022,43 @@ dialog input:focus,dialog select:focus{border-color:#666}
 }
 </style>
 
+
+<style>
+/* === 手機版分類導覽：自動換行，不需要左右滑 === */
+@media(max-width:600px){
+  .tabs{
+    display:flex !important;
+    flex-wrap:wrap !important;
+    overflow:visible !important;
+    gap:7px !important;
+    padding:2px 0 14px !important;
+  }
+
+  .tabs > .tab,
+  .tabs > .category-dropdown{
+    flex:0 0 auto !important;
+  }
+
+  .tabs .tab{
+    padding:8px 11px !important;
+    font-size:11px !important;
+  }
+
+  .category-dropdown{
+    position:relative !important;
+  }
+
+  .category-menu{
+    left:0 !important;
+    transform:none !important;
+  }
+
+  .special-sale-tab{
+    order:0;
+  }
+}
+</style>
+
 </head>
 <body>
 <header class="topbar">
