@@ -1059,6 +1059,71 @@ dialog input:focus,dialog select:focus{border-color:#666}
 }
 </style>
 
+
+<style>
+/* === 自由出價：固定成交提醒 === */
+.section-title-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.free-offer-notice{
+  display:none;
+  color:#cbbcaf;
+  font-size:12px;
+  font-weight:700;
+  line-height:1.4;
+  position:relative;
+  top:2px;
+}
+.free-offer-notice.show{
+  display:inline-block;
+  animation:freeOfferTinyBounce 1.8s ease-in-out infinite;
+}
+@keyframes freeOfferTinyBounce{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-2px)}
+}
+@media(max-width:600px){
+  .section-title-row{gap:4px}
+  .free-offer-notice{font-size:10px;top:2px}
+}
+</style>
+
+
+<style>
+/* === 後台：分類顯示開關 === */
+.category-manage-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+  margin-top:4px;
+}
+.category-manage-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:11px 12px;
+  border:1px solid #b99f8a;
+  border-radius:12px;
+  background:#ead9cc;
+  color:#554238;
+  font-size:13px;
+  font-weight:800;
+}
+.category-manage-item input{
+  width:18px;
+  height:18px;
+  accent-color:#9b7156;
+}
+.category-manage-help{
+  color:#8a7d72;
+  font-size:12px;
+  line-height:1.6;
+  margin-top:-4px;
+}
+@media(max-width:560px){
+  .category-manage-grid{grid-template-columns:1fr}
+}
+</style>
+
 </head>
 <body>
 <header class="topbar">
@@ -1082,6 +1147,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
     <input id="searchInput" class="search" placeholder="搜尋商品名稱…">
     <button id="addBtn" class="btn primary hidden">＋ 新增商品</button>
     <button id="catalogImageBtn" class="btn hidden" type="button">📷 產生分類販售圖</button>
+    <button id="categorySettingsBtn" class="btn hidden" type="button">分類顯示</button>
     <span id="status" style="display:none!important"></span>
 </section>
 
@@ -1099,10 +1165,10 @@ dialog input:focus,dialog select:focus{border-color:#666}
         <button type="button" data-category="作物限男">限男</button>
         <button type="button" data-category="作物限女">限女</button>
       </div>
-    </div><button class="tab" data-category="寵物">寵物</button><button class="tab special-sale-tab" data-category="特價區">特價區 <span class="limited-mini">限時</span></button><button class="tab" data-category="收購區">收購區</button><button class="tab" data-category="交換區">交換區</button>
+    </div><button class="tab" data-category="寵物">寵物</button><button class="tab special-sale-tab" data-category="特價區">特價區 <span class="limited-mini">限時</span></button><button class="tab" data-category="自由出價">自由出價</button><button class="tab" data-category="收購區">收購區</button><button class="tab" data-category="交換區">交換區</button>
   </nav>
 <section class="section-head">
-    <div><h3 id="sectionTitle">全部商品</h3><p id="productCount">商品載入中… ♡</p></div>
+    <div><div class="section-title-row"><h3 id="sectionTitle">全部商品</h3><span id="freeOfferNotice" class="free-offer-notice">出價不代表成交，請截圖私訊確認。</span></div><p id="productCount">商品載入中… ♡</p></div>
   </section>
 
   <section id="grid" class="grid"></section>
@@ -1120,6 +1186,18 @@ dialog input:focus,dialog select:focus{border-color:#666}
     <input id="loginPassword" type="password" autocomplete="current-password" required>
     <div id="loginError" class="error"></div>
     <button class="btn primary full" type="submit">登入</button>
+  </form>
+</dialog>
+
+
+<dialog id="categorySettingsDialog">
+  <form id="categorySettingsForm">
+    <button type="button" class="close" data-close="categorySettingsDialog">×</button>
+    <h3>分類顯示設定</h3>
+    <p class="category-manage-help">關閉只會隱藏前台分類，分類與裡面的商品都會保留，之後隨時可以重新開啟。</p>
+    <div id="categoryManageGrid" class="category-manage-grid"></div>
+    <div id="categorySettingsError" class="error"></div>
+    <button id="saveCategorySettingsBtn" class="btn primary full" type="submit">儲存分類設定</button>
   </form>
 </dialog>
 
@@ -1144,7 +1222,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
             <option value="作物限女">限女</option>
           </optgroup>
           <option value="寵物">寵物</option>
-          <option value="特價區">特價區</option>
+          <option value="特價區">特價區</option><option value="自由出價">自由出價</option>
           <option value="收購區">收購區</option>
           <option value="交換區">交換區</option>
         </select>
@@ -1281,7 +1359,7 @@ import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import {
-  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
+  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, setDoc,
   onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
@@ -1311,6 +1389,69 @@ let currentUser = null;
 let editingImage = "";
 let editingRealImage = "";
 let editingDemoVideoPath = "";
+
+const CATEGORY_SETTING_DOC_ID="__category_settings__";
+const CATEGORY_LABELS=["家具","玩偶","花盆","戒指","作物","寵物","特價區","自由出價","收購區","交換區"];
+let hiddenCategories=[];
+
+function topCategoryName(category){
+  const c=String(category||"");
+  if(c.startsWith("戒指"))return "戒指";
+  if(c.startsWith("作物"))return "作物";
+  return c;
+}
+
+function isCategoryVisible(name){
+  return !hiddenCategories.includes(String(name||""));
+}
+
+function categoryNavElement(name){
+  const direct=document.querySelector(`.tabs > .tab[data-category="${name}"]`);
+  if(direct)return direct;
+  const group=document.querySelector(`.tabs .group-tab[data-group="${name}"]`);
+  return group?.closest(".category-dropdown") || null;
+}
+
+function syncActiveCategoryClasses(){
+  $$(".tab").forEach(x=>x.classList.remove("active"));
+  $$(".category-menu button").forEach(x=>x.classList.remove("active"));
+  const top=topCategoryName(activeCategory);
+  if(top==="戒指" || top==="作物"){
+    const groupBtn=document.querySelector(`.group-tab[data-group="${top}"]`);
+    groupBtn?.classList.add("active");
+    const item=document.querySelector(`.category-menu button[data-category="${activeCategory}"]`);
+    item?.classList.add("active");
+  }else{
+    document.querySelector(`.tabs > .tab[data-category="${activeCategory}"]`)?.classList.add("active");
+  }
+}
+
+function ensureActiveCategoryVisible(){
+  if(isCategoryVisible(topCategoryName(activeCategory)))return;
+  const first=CATEGORY_LABELS.find(isCategoryVisible) || "家具";
+  activeGroup=(first==="戒指" || first==="作物") ? first : "";
+  activeCategory=first;
+  syncActiveCategoryClasses();
+}
+
+function applyCategoryVisibility(){
+  CATEGORY_LABELS.forEach(name=>{
+    const el=categoryNavElement(name);
+    if(el)el.classList.toggle("hidden",!isCategoryVisible(name));
+  });
+  ensureActiveCategoryVisible();
+}
+
+function renderCategorySettings(){
+  const box=$("#categoryManageGrid");
+  if(!box)return;
+  box.innerHTML=CATEGORY_LABELS.map(name=>`
+    <label class="category-manage-item">
+      <span>${esc(name)}</span>
+      <input type="checkbox" data-category-visible="${esc(name)}" ${isCategoryVisible(name)?"checked":""}>
+    </label>
+  `).join("");
+}
 
 let editingExchangeWantImage = "";
 let editingExchangeOffers = [];
@@ -2116,7 +2257,9 @@ $("#productCount").textContent=`${list.length} 件商品`;
 
   $("#addBtn").classList.toggle("hidden", !isAdmin());
   $("#catalogImageBtn")?.classList.toggle("hidden", !isAdmin());
+  $("#categorySettingsBtn")?.classList.toggle("hidden", !isAdmin());
   $("#adminBtn").textContent=isAdmin() ? "管理員登出" : "管理員登入";
+  applyCategoryVisibility();
   updateCartFab();
 }
 
@@ -2875,6 +3018,48 @@ onAuthStateChanged(auth,user=>{
   render();
 });
 
+
+$("#categorySettingsBtn")?.addEventListener("click",()=>{
+  if(!isAdmin())return;
+  $("#categorySettingsError").textContent="";
+  renderCategorySettings();
+  $("#categorySettingsDialog").showModal();
+});
+
+$("#categorySettingsForm")?.addEventListener("submit",async e=>{
+  e.preventDefault();
+  if(!isAdmin()){
+    $("#categorySettingsError").textContent="管理員尚未登入";
+    return;
+  }
+  const saveBtn=$("#saveCategorySettingsBtn");
+  const nextHidden=[...document.querySelectorAll("[data-category-visible]")]
+    .filter(input=>!input.checked)
+    .map(input=>input.dataset.categoryVisible);
+  saveBtn.disabled=true;
+  saveBtn.textContent="儲存中…";
+  $("#categorySettingsError").textContent="";
+  try{
+    await setDoc(doc(db,"products",CATEGORY_SETTING_DOC_ID),{
+      type:"category-settings",
+      hiddenCategories:nextHidden,
+      updatedAt:serverTimestamp()
+    },{merge:true});
+    hiddenCategories=nextHidden;
+    applyCategoryVisibility();
+    ensureActiveCategoryVisible();
+    render();
+    $("#categorySettingsDialog").close();
+    toast("分類顯示設定已儲存");
+  }catch(err){
+    console.error(err);
+    $("#categorySettingsError").textContent=err.message||"分類設定儲存失敗";
+  }finally{
+    saveBtn.disabled=false;
+    saveBtn.textContent="儲存分類設定";
+  }
+});
+
 $("#addBtn").onclick=()=>openProduct();
 
 function openCatalogPicker(){
@@ -3028,7 +3213,14 @@ onSnapshot(
   collection(db,"products"),
   snap=>{
     productsInitialLoaded=true;
-    products=snap.docs.map(d=>({id:d.id,...d.data()}));
+    const settingsSnap=snap.docs.find(d=>d.id===CATEGORY_SETTING_DOC_ID);
+    hiddenCategories=Array.isArray(settingsSnap?.data()?.hiddenCategories)
+      ? settingsSnap.data().hiddenCategories.map(String)
+      : [];
+    products=snap.docs
+      .filter(d=>d.id!==CATEGORY_SETTING_DOC_ID)
+      .map(d=>({id:d.id,...d.data()}));
+    ensureActiveCategoryVisible();
     $("#status").textContent="已連線";
     render();
     renderCart();
@@ -3066,6 +3258,15 @@ $("#productBuyerOffer").onchange=updateProductFormMode;
   </div>
 </dialog>
 
+
+
+<script>
+(function(){
+ function updateFreeOfferNotice(){var notice=document.getElementById('freeOfferNotice');if(!notice)return;var active=document.querySelector('.tabs .tab.active');var isFreeOffer=!!(active&&active.dataset&&active.dataset.category==='自由出價');notice.classList.toggle('show',isFreeOffer);}
+ document.addEventListener('click',function(e){if(e.target.closest('.tabs .tab, .category-menu button'))setTimeout(updateFreeOfferNotice,0);});
+ document.addEventListener('DOMContentLoaded',updateFreeOfferNotice);setTimeout(updateFreeOfferNotice,0);
+})();
+</script>
 
 </body>
 </html>
