@@ -2417,6 +2417,12 @@ async function generateProductCatalogImage(selectedFile=null){
         sections:[{label:"特價區",match:p=>String(p.category||"")==="特價區"}]
       },
       {
+        file:"自由出價",
+        title:"自由出價",
+        mode:"freeOffer",
+        sections:[{label:"自由出價",match:p=>String(p.category||"")==="自由出價"}]
+      },
+      {
         file:"收購區",
         title:"收購區",
         mode:"buy",
@@ -2498,7 +2504,9 @@ async function generateProductCatalogImage(selectedFile=null){
         ? `${group.title}｜收購清單`
         : group.mode==="exchange"
           ? `${group.title}｜交換清單`
-          : `${group.title}｜販售清單`;
+          : group.mode==="freeOffer"
+            ? `${group.title}｜自由出價`
+            : `${group.title}｜販售清單`;
       ctx.fillText(catalogHeading,W/2,46);
 
       if(group.note){
@@ -2511,6 +2519,7 @@ async function generateProductCatalogImage(selectedFile=null){
         ctx.fillText(
           group.mode==="buy" ? "Wanted List" :
           group.mode==="exchange" ? "Exchange List" :
+          group.mode==="freeOffer" ? "Make an Offer" :
           "Sale List",
           W/2,76
         );
@@ -2630,7 +2639,7 @@ async function generateProductCatalogImage(selectedFile=null){
             }else{
               ctx.fillText(catalogFitText(ctx,p.name,cardW-10),x+cardW/2,cy+imageH+20);
 
-              const priceText=productPriceLabel(p);
+              const priceText=group.mode==="freeOffer" ? "自由出價" : productPriceLabel(p);
               const stockText=group.mode==="buy"
                 ? `需求 ${p.purchaseQtyText||("×"+catalogStock)}`
                 : `×${catalogStock}`;
@@ -2670,7 +2679,13 @@ async function generateProductCatalogImage(selectedFile=null){
       }
 
       const link=document.createElement("a");
-      const filePrefix=group.mode==="buy" ? "收購清單" : group.mode==="exchange" ? "交換清單" : "販售清單";
+      const filePrefix=group.mode==="buy"
+        ? "收購清單"
+        : group.mode==="exchange"
+          ? "交換清單"
+          : group.mode==="freeOffer"
+            ? "自由出價清單"
+            : "販售清單";
       link.download=`${filePrefix}-${group.file}-${new Date().toISOString().slice(0,10)}.jpg`;
       link.href=canvas.toDataURL("image/jpeg",0.95);
       document.body.appendChild(link);
@@ -3194,6 +3209,7 @@ function openCatalogPicker(){
         <button data-cat="作物">作物</button>
         <button data-cat="寵物">寵物</button>
         <button data-cat="特價區">特價區</button>
+        <button data-cat="自由出價">自由出價</button>
         <button data-cat="收購區">收購區</button>
         <button data-cat="交換區">交換區</button>
         <button class="catalog-all" data-cat="">全部產生</button>
