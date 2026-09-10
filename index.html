@@ -1084,6 +1084,53 @@ dialog input:focus,dialog select:focus{border-color:#666}
   .section-title-row{gap:4px}
   .free-offer-notice{font-size:10px;top:2px}
 }
+
+.buyer-offer-dialog{
+  position:fixed;
+  inset:0;
+  margin:auto;
+  width:min(360px,calc(100% - 32px));
+  max-height:max-content;
+  border:none;
+  border-radius:18px;
+  padding:0;
+  background:#fffaf6;
+  color:#57453b;
+  box-shadow:0 18px 55px rgba(45,32,25,.28);
+}
+.buyer-offer-dialog::backdrop{
+  background:rgba(40,30,25,.42);
+  backdrop-filter:blur(3px);
+}
+.buyer-offer-dialog form{
+  padding:24px;
+}
+.buyer-offer-dialog h3{
+  text-align:center;
+  color:#57453b;
+}
+.buyer-offer-dialog p{
+  text-align:center;
+  color:#8a7467;
+}
+.buyer-offer-dialog input{
+  width:100%;
+  box-sizing:border-box;
+  background:#fff;
+  color:#57453b;
+  border:1px solid #cdb9ac;
+}
+.buyer-offer-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+@media(max-width:600px){
+  .buyer-offer-dialog{
+    width:min(340px,calc(100% - 28px));
+  }
+}
+
 </style>
 
 
@@ -1340,6 +1387,21 @@ dialog input:focus,dialog select:focus{border-color:#666}
 
 
 <button id="cartFab" class="cart-fab" type="button">交易清單 <span id="cartCount" class="cart-count">0</span></button>
+
+
+<dialog id="buyerOfferDialog" class="buyer-offer-dialog">
+  <form id="buyerOfferForm" method="dialog" onsubmit="return false;">
+    <button type="button" class="close" id="buyerOfferClose">×</button>
+    <h3>自由出價</h3>
+    <p id="buyerOfferHint">請輸入你的出價</p>
+    <input id="buyerOfferInput" type="text" inputmode="decimal" autocomplete="off" placeholder="例如：120 糖">
+    <div id="buyerOfferError" class="error"></div>
+    <div class="buyer-offer-actions">
+      <button type="button" class="btn" id="buyerOfferCancel">取消</button>
+      <button type="button" class="btn primary" id="buyerOfferConfirm">確認出價</button>
+    </div>
+  </form>
+</dialog>
 
 <dialog id="cartDialog">
   <form method="dialog" onsubmit="return false;">
@@ -1936,6 +1998,64 @@ function bulkTotal(p,qty){
   return {amount:sets*deal.price+rest*base.amount,unit:base.unit};
 }
 function neatNum(n){ return Number.isInteger(n)?String(n):String(Math.round(n*100)/100); }
+function openBuyerOfferDialog(p,existingOffer=""){
+  return new Promise(resolve=>{
+    const dlg=$("#buyerOfferDialog");
+    const input=$("#buyerOfferInput");
+    const hint=$("#buyerOfferHint");
+    const err=$("#buyerOfferError");
+    const confirm=$("#buyerOfferConfirm");
+    const cancel=$("#buyerOfferCancel");
+    const close=$("#buyerOfferClose");
+
+    if(!dlg || !input){
+      resolve(null);
+      return;
+    }
+
+    hint.textContent=p?.minimumOffer
+      ? `請輸入你的出價（最低 ${p.minimumOffer}）`
+      : "請輸入你的出價";
+    input.value=existingOffer||"";
+    err.textContent="";
+
+    let finished=false;
+    const finish=value=>{
+      if(finished)return;
+      finished=true;
+      if(dlg.open)dlg.close();
+      resolve(value);
+    };
+
+    confirm.onclick=()=>{
+      const checked=validateBuyerOffer(p,input.value);
+      if(!checked.ok){
+        err.textContent=checked.message;
+        input.focus();
+        return;
+      }
+      finish(checked.value);
+    };
+    cancel.onclick=()=>finish(null);
+    close.onclick=()=>finish(null);
+
+    input.onkeydown=e=>{
+      if(e.key==="Enter"){
+        e.preventDefault();
+        confirm.click();
+      }
+    };
+
+    dlg.oncancel=e=>{
+      e.preventDefault();
+      finish(null);
+    };
+
+    dlg.showModal();
+    setTimeout(()=>input.focus(),50);
+  });
+}
+
 function isBuyerOfferProduct(p){ return !!p?.buyerOffer; }
 function productPriceLabel(p){ return isBuyerOfferProduct(p) ? "自出價" : String(p?.price||""); }
 function validateBuyerOffer(p,value){
@@ -2242,20 +2362,15 @@ $("#productCount").textContent=`${list.length} 件商品`;
           updateVariantCardImage();
         };
       }
-      if(addBtn)addBtn.onclick=()=>{
+      if(addBtn)addBtn.onclick=async()=>{
         if(sold){toast("此商品已售完");return;}
         if(reserved){toast("此商品已預訂");return;}
         let buyerOfferValue="";
         if(!isBuy && isBuyerOfferProduct(p)){
           const existingOffer=cart.find(x=>x.id===p.id && String(x.variant||"")===String(variantSelect?.value||""))?.offerPrice||"";
-          const answer=prompt(
-            p.minimumOffer ? `請輸入你的出價（最低 ${p.minimumOffer}）` : "請輸入你的出價",
-            existingOffer
-          );
+          const answer=await openBuyerOfferDialog(p,existingOffer);
           if(answer===null)return;
-          const checked=validateBuyerOffer(p,answer);
-          if(!checked.ok){ toast(checked.message); return; }
-          buyerOfferValue=checked.value;
+          buyerOfferValue=answer;
         }
         addToList(p,qtyInput?.value||1,isBuy?"buy":"sale",variantSelect?.value||"");
         if(buyerOfferValue){
