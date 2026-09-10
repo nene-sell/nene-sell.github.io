@@ -1124,6 +1124,14 @@ dialog input:focus,dialog select:focus{border-color:#666}
 }
 </style>
 
+
+<style>
+/* === 分類設定讀取完成前先隱藏，避免手機載入時閃出已關閉分類 === */
+.tabs.category-settings-loading{
+  visibility:hidden !important;
+}
+</style>
+
 </head>
 <body>
 <header class="topbar">
@@ -1146,12 +1154,12 @@ dialog input:focus,dialog select:focus{border-color:#666}
   <section class="toolbar">
     <input id="searchInput" class="search" placeholder="搜尋商品名稱…">
     <button id="addBtn" class="btn primary hidden">＋ 新增商品</button>
-    <button id="catalogImageBtn" class="btn hidden" type="button">📷 產生分類販售圖</button>
+    <button id="catalogImageBtn" class="btn hidden" type="button">📷 產生分類圖片</button>
     <button id="categorySettingsBtn" class="btn hidden" type="button">分類顯示</button>
     <span id="status" style="display:none!important"></span>
 </section>
 
-  <nav class="tabs">
+  <nav class="tabs category-settings-loading">
     <button class="tab active" data-category="家具">家具</button><button class="tab" data-category="玩偶">玩偶</button><button class="tab" data-category="花盆">花盆</button><div class="category-dropdown">
       <button class="tab group-tab" data-group="戒指" type="button">戒指 <span class="drop-arrow">▾</span></button>
       <div class="category-menu">
@@ -1440,6 +1448,10 @@ function applyCategoryVisibility(){
     if(el)el.classList.toggle("hidden",!isCategoryVisible(name));
   });
   ensureActiveCategoryVisible();
+}
+
+function revealCategoryTabs(){
+  document.querySelector(".tabs")?.classList.remove("category-settings-loading");
 }
 
 function renderCategorySettings(){
@@ -2330,9 +2342,24 @@ async function generateProductCatalogImage(selectedFile=null){
     btn.disabled=true;
     btn.textContent="產生中…";
 
-    const saleProducts=products.filter(p=>{
-      if(p.category==="收購區" || p.category==="交換區")return false;
-      const sold=p.status==="sold" || getStock(p)<=0;
+    const catalogProducts=products.filter(p=>{
+      const cat=String(p.category||"");
+      const stock=getStock(p);
+
+      if(cat==="收購區"){
+        // 需求已收齊的不放進收購截圖。
+        return stock>0 && !!p.imageData;
+      }
+
+      if(cat==="交換區"){
+        // 已換出 / 已預訂的不放進交換截圖。
+        const unavailable=p.status==="sold" || p.status==="reserved" || stock<=0;
+        if(unavailable)return false;
+        const offers=normalizeExchangeOffers(p).filter(x=>x && (x.name||x.imageData));
+        return !!(offers.length || p.exchangeWantImageData || p.exchangeWantName);
+      }
+
+      const sold=p.status==="sold" || stock<=0;
       if(sold || p.status==="reserved")return false;
       return !!p.imageData;
     });
@@ -2385,6 +2412,18 @@ async function generateProductCatalogImage(selectedFile=null){
         file:"特價區",
         title:"特價區",
         sections:[{label:"特價區",match:p=>String(p.category||"")==="特價區"}]
+      },
+      {
+        file:"收購區",
+        title:"收購區",
+        mode:"buy",
+        sections:[{label:"收購區",match:p=>String(p.category||"")==="收購區"}]
+      },
+      {
+        file:"交換區",
+        title:"交換區",
+        mode:"exchange",
+        sections:[{label:"交換區",match:p=>String(p.category||"")==="交換區"}]
       }
     ];
 
@@ -2392,7 +2431,7 @@ async function generateProductCatalogImage(selectedFile=null){
       ...group,
       sections:group.sections.map(sec=>({
         ...sec,
-        items:saleProducts.filter(sec.match).sort((a,b)=>orderValue(a)-orderValue(b))
+        items:catalogProducts.filter(sec.match).sort((a,b)=>orderValue(a)-orderValue(b))
       })).filter(sec=>sec.items.length)
     })).filter(group=>group.sections.length);
 
@@ -2401,7 +2440,7 @@ async function generateProductCatalogImage(selectedFile=null){
     }
 
     if(!available.length){
-      toast("目前沒有可產生的販售商品");
+      toast("目前這個分類沒有可產生的內容");
       return;
     }
 
@@ -2452,7 +2491,12 @@ async function generateProductCatalogImage(selectedFile=null){
       ctx.textAlign="center";
       ctx.fillStyle="#4b3b32";
       ctx.font='700 34px Arial,"Microsoft JhengHei",sans-serif';
-      ctx.fillText(`${group.title}｜販售清單`,W/2,46);
+      const catalogHeading=group.mode==="buy"
+        ? `${group.title}｜收購清單`
+        : group.mode==="exchange"
+          ? `${group.title}｜交換清單`
+          : `${group.title}｜販售清單`;
+      ctx.fillText(catalogHeading,W/2,46);
 
       if(group.note){
         ctx.fillStyle="#8a7467";
@@ -2461,7 +2505,12 @@ async function generateProductCatalogImage(selectedFile=null){
       }else{
         ctx.fillStyle="#8a7467";
         ctx.font='16px Arial,"Microsoft JhengHei",sans-serif';
-        ctx.fillText("Sale List",W/2,76);
+        ctx.fillText(
+          group.mode==="buy" ? "Wanted List" :
+          group.mode==="exchange" ? "Exchange List" :
+          "Sale List",
+          W/2,76
+        );
       }
 
       let y=topH;
@@ -2503,50 +2552,104 @@ async function generateProductCatalogImage(selectedFile=null){
             ctx.stroke();
 
             try{
-              const img=await loadCatalogImage(p.imageData);
-              const scale=Math.min(cardW/img.width,imageH/img.height);
-              const dw=img.width*scale;
-              const dh=img.height*scale;
-              const dx=x+(cardW-dw)/2;
-              const dy=cy+(imageH-dh)/2;
-
               ctx.save();
               catalogRoundRect(ctx,x,cy,cardW,imageH,7);
               ctx.clip();
               ctx.fillStyle="#eee2d8";
               ctx.fillRect(x,cy,cardW,imageH);
-              ctx.drawImage(img,dx,dy,dw,dh);
+
+              if(group.mode==="exchange"){
+                const offers=normalizeExchangeOffers(p).filter(o=>o && (o.name||o.imageData));
+                const leftImgs=offers.filter(o=>o.imageData).slice(0,4);
+                const leftX=x, leftW=Math.floor(cardW*0.46);
+                const rightX=x+Math.floor(cardW*0.54), rightW=cardW-(rightX-x);
+                const innerGap=3;
+
+                // Left side: up to four "I offer" thumbnails.
+                if(leftImgs.length){
+                  const miniCols=leftImgs.length===1 ? 1 : 2;
+                  const miniRows=Math.ceil(leftImgs.length/miniCols);
+                  const miniW=(leftW-innerGap*(miniCols-1))/miniCols;
+                  const miniH=(imageH-innerGap*(miniRows-1))/miniRows;
+                  for(let oi=0;oi<leftImgs.length;oi++){
+                    const offerImg=await loadCatalogImage(leftImgs[oi].imageData);
+                    const oc=oi%miniCols, or=Math.floor(oi/miniCols);
+                    const bx=leftX+oc*(miniW+innerGap);
+                    const by=cy+or*(miniH+innerGap);
+                    const s=Math.min(miniW/offerImg.width,miniH/offerImg.height);
+                    const dw=offerImg.width*s, dh=offerImg.height*s;
+                    ctx.drawImage(offerImg,bx+(miniW-dw)/2,by+(miniH-dh)/2,dw,dh);
+                  }
+                }
+
+                // Right side: wanted item.
+                if(p.exchangeWantImageData){
+                  const wantImg=await loadCatalogImage(p.exchangeWantImageData);
+                  const s=Math.min(rightW/wantImg.width,imageH/wantImg.height);
+                  const dw=wantImg.width*s, dh=wantImg.height*s;
+                  ctx.drawImage(wantImg,rightX+(rightW-dw)/2,cy+(imageH-dh)/2,dw,dh);
+                }
+
+                // Middle divider / exchange arrow.
+                ctx.fillStyle="#8a7467";
+                ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
+                ctx.textAlign="center";
+                ctx.fillText("⇄",x+cardW/2,cy+imageH/2+6);
+              }else{
+                const img=await loadCatalogImage(p.imageData);
+                const scale=Math.min(cardW/img.width,imageH/img.height);
+                const dw=img.width*scale;
+                const dh=img.height*scale;
+                const dx=x+(cardW-dw)/2;
+                const dy=cy+(imageH-dh)/2;
+                ctx.drawImage(img,dx,dy,dw,dh);
+              }
               ctx.restore();
-            }catch{}
+            }catch{
+              ctx.restore?.();
+            }
 
             ctx.textAlign="center";
             ctx.fillStyle="#493a32";
             ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
-            ctx.fillText(catalogFitText(ctx,p.name,cardW-10),x+cardW/2,cy+imageH+20);
 
             const catalogStock=getStock(p);
-            const priceText=productPriceLabel(p);
-            const stockText=`×${catalogStock}`;
+            if(group.mode==="exchange"){
+              const offers=normalizeExchangeOffers(p).filter(o=>o && (o.name||o.imageData));
+              const offerNames=offers.map(o=>o.name).filter(Boolean).join("＋");
+              const wantName=String(p.exchangeWantName||"").trim();
+              const pairName=`${offerNames||"我提供"} ⇄ ${wantName||"想換"}`;
+              ctx.fillText(catalogFitText(ctx,pairName,cardW-10),x+cardW/2,cy+imageH+20);
 
-            ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
-            const priceW=ctx.measureText(priceText).width;
-            ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
-            const stockW=ctx.measureText(stockText).width;
-            const spacing=8;
-            const totalW=priceW+spacing+stockW;
-            let tx=x+(cardW-totalW)/2;
+              ctx.fillStyle="#75665e";
+              ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
+              ctx.fillText(`可交換 ×${catalogStock}`,x+cardW/2,cy+imageH+44);
+            }else{
+              ctx.fillText(catalogFitText(ctx,p.name,cardW-10),x+cardW/2,cy+imageH+20);
 
-            ctx.textAlign="left";
-            ctx.fillStyle="#b66f59";
-            ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
-            ctx.fillText(priceText,tx,cy+imageH+44);
-            tx+=priceW+spacing;
+              const priceText=productPriceLabel(p);
+              const stockText=group.mode==="buy" ? `需求 ×${catalogStock}` : `×${catalogStock}`;
 
-            ctx.fillStyle="#75665e";
-            ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
-            ctx.fillText(stockText,tx,cy+imageH+44);
+              ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
+              const priceW=ctx.measureText(priceText).width;
+              ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
+              const stockW=ctx.measureText(stockText).width;
+              const spacing=8;
+              const totalW=priceW+spacing+stockW;
+              let tx=x+(cardW-totalW)/2;
 
-            if(variantLines.length){
+              ctx.textAlign="left";
+              ctx.fillStyle="#b66f59";
+              ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
+              ctx.fillText(group.mode==="buy" ? `收購 ${priceText}` : priceText,tx,cy+imageH+44);
+              tx+=priceW+spacing+(group.mode==="buy" ? ctx.measureText("收購 ").width : 0);
+
+              ctx.fillStyle="#75665e";
+              ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
+              ctx.fillText(stockText,tx,cy+imageH+44);
+            }
+
+            if(group.mode!=="exchange" && variantLines.length){
               ctx.textAlign="center";
               ctx.fillStyle="#75665e";
               ctx.font='600 12px Arial,"Microsoft JhengHei",sans-serif';
@@ -2562,7 +2665,8 @@ async function generateProductCatalogImage(selectedFile=null){
       }
 
       const link=document.createElement("a");
-      link.download=`販售清單-${group.file}-${new Date().toISOString().slice(0,10)}.jpg`;
+      const filePrefix=group.mode==="buy" ? "收購清單" : group.mode==="exchange" ? "交換清單" : "販售清單";
+      link.download=`${filePrefix}-${group.file}-${new Date().toISOString().slice(0,10)}.jpg`;
       link.href=canvas.toDataURL("image/jpeg",0.95);
       document.body.appendChild(link);
       link.click();
@@ -2576,13 +2680,13 @@ async function generateProductCatalogImage(selectedFile=null){
       await exportOne(group);
     }
 
-    toast(`已產生 ${available.length} 張分類販售清單 ♡`);
+    toast(`已產生 ${available.length} 張分類圖片 ♡`);
   }catch(err){
     console.error(err);
-    toast("販售清單產生失敗");
+    toast("分類圖片產生失敗");
   }finally{
     btn.disabled=false;
-    btn.textContent="📷 產生分類販售圖";
+    btn.textContent="📷 產生分類圖片";
   }
 }
 
@@ -3078,6 +3182,8 @@ function openCatalogPicker(){
         <button data-cat="作物">作物</button>
         <button data-cat="寵物">寵物</button>
         <button data-cat="特價區">特價區</button>
+        <button data-cat="收購區">收購區</button>
+        <button data-cat="交換區">交換區</button>
         <button class="catalog-all" data-cat="">全部產生</button>
       </div>
       <button class="catalog-picker-cancel">取消</button>
@@ -3223,6 +3329,7 @@ onSnapshot(
     ensureActiveCategoryVisible();
     $("#status").textContent="已連線";
     render();
+    revealCategoryTabs();
     renderCart();
   },
   err=>{
@@ -3266,6 +3373,11 @@ $("#productBuyerOffer").onchange=updateProductFormMode;
  document.addEventListener('click',function(e){if(e.target.closest('.tabs .tab, .category-menu button'))setTimeout(updateFreeOfferNotice,0);});
  document.addEventListener('DOMContentLoaded',updateFreeOfferNotice);setTimeout(updateFreeOfferNotice,0);
 })();
+</script>
+
+
+<script>
+setTimeout(()=>document.querySelector(".tabs")?.classList.remove("category-settings-loading"),2000);
 </script>
 
 </body>
