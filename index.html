@@ -1253,8 +1253,11 @@ dialog input:focus,dialog select:focus{border-color:#666}
         <small>優惠文字可自行輸入；留空時預設顯示「任選」。</small>
       </div>
     </div>
-    <label><span id="stockFieldLabel">庫存</span>
+    <label id="stockNumberField"><span id="stockFieldLabel">庫存</span>
       <input id="productStock" type="number" min="0" step="1" value="1" placeholder="例如：5" required>
+    </label>
+    <label id="purchaseQtyTextField" class="hidden"><span>收購數量／說明</span>
+      <input id="purchaseQtyText" type="text" maxlength="30" placeholder="例如：不限量、有就收、只收1個">
     </label>
     <div class="variant-editor">
       <div class="variant-head">
@@ -2031,7 +2034,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
     card.className=`card ${isBuy?"wanted-card":""}${isExchange?" exchange-card":""}${reserved?" reserved-card":""}${sold?" sold-card":""}`;
 
     const statusText=isBuy
-      ? (limit===0 ? "已收齊" : limit<=2 ? `還缺 ${limit}` : `需求 ${limit}`)
+      ? (p.purchaseQtyText ? `需求 ${p.purchaseQtyText}` : (limit===0 ? "已收齊" : limit<=2 ? `還缺 ${limit}` : `需求 ${limit}`))
       : isExchange
         ? (sold ? "已換出" : reserved ? "交換預定中" : limit===0 ? "已換出" : `可交換 ${limit}`)
         : (sold ? "售完" : reserved ? "已預訂" : limit===0 ? "已售完" : `庫存 ${limit}`);
@@ -2628,7 +2631,9 @@ async function generateProductCatalogImage(selectedFile=null){
               ctx.fillText(catalogFitText(ctx,p.name,cardW-10),x+cardW/2,cy+imageH+20);
 
               const priceText=productPriceLabel(p);
-              const stockText=group.mode==="buy" ? `需求 ×${catalogStock}` : `×${catalogStock}`;
+              const stockText=group.mode==="buy"
+                ? `需求 ${p.purchaseQtyText||("×"+catalogStock)}`
+                : `×${catalogStock}`;
 
               ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
               const priceW=ctx.measureText(priceText).width;
@@ -2641,8 +2646,8 @@ async function generateProductCatalogImage(selectedFile=null){
               ctx.textAlign="left";
               ctx.fillStyle="#b66f59";
               ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
-              ctx.fillText(group.mode==="buy" ? `收購 ${priceText}` : priceText,tx,cy+imageH+44);
-              tx+=priceW+spacing+(group.mode==="buy" ? ctx.measureText("收購 ").width : 0);
+              ctx.fillText(group.mode==="buy" ? `收購價 ${priceText}` : priceText,tx,cy+imageH+44);
+              tx+=priceW+spacing+(group.mode==="buy" ? ctx.measureText("收購價 ").width : 0);
 
               ctx.fillStyle="#75665e";
               ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
@@ -2771,7 +2776,10 @@ function updateProductFormMode(){
   const buy=category==="收購區";
   const exchange=category==="交換區";
 
-  $("#stockFieldLabel").textContent=buy ? "需求數量" : exchange ? "可交換數量" : "庫存";
+  $("#stockFieldLabel").textContent=exchange ? "可交換數量" : "庫存";
+  $("#stockNumberField")?.classList.toggle("hidden",buy);
+  $("#purchaseQtyTextField")?.classList.toggle("hidden",!buy);
+  if($("#productStock")) $("#productStock").required=!buy;
   const buyerOffer=!!$("#productBuyerOffer")?.checked && !buy && !exchange;
   $("#productPrice").placeholder=buy ? "例如：100 T" : buyerOffer ? "自出價商品可留空" : "例如：80 糖";
   $("#minimumOfferField")?.classList.toggle("hidden",!buyerOffer);
@@ -2808,6 +2816,7 @@ function openProduct(p=null){
   $("#discountPrice").value=p?.discountPrice??"";
   $("#discountText").value=p?.discountText||"";
   $("#productStock").value=getVariants(p).length?0:(Number.isFinite(Number(p?.stock))?Number(p.stock):1);
+  $("#purchaseQtyText").value=p?.purchaseQtyText||"";
   if($("#productIsNew")) $("#productIsNew").checked=!!p && isNewActive(p);
   if($("#productStatus")) $("#productStatus").value=p?.status||"selling";
   loadVariantRows(p);
@@ -3033,9 +3042,12 @@ $("#productForm").addEventListener("submit", async e=>{
       status:$("#productStatus")?.value||"selling",
       isNew:wantsNew,
       newUntilMs,
-      stock:variants.length
-        ? variants.reduce((sum,v)=>sum+v.stock,0)
-        : Math.max(0,Math.floor(Number($("#productStock").value)||0)),
+      stock:$("#productCategory").value==="收購區"
+        ? 1
+        : (variants.length
+          ? variants.reduce((sum,v)=>sum+v.stock,0)
+          : Math.max(0,Math.floor(Number($("#productStock").value)||0))),
+      purchaseQtyText:$("#productCategory").value==="收購區" ? ($("#purchaseQtyText")?.value||"").trim() : "",
       variants,
       imageData:isExchange ? cleanExchangeOffers[0].imageData : editingImage,
       exchangeOffers:isExchange ? cleanExchangeOffers : [],
