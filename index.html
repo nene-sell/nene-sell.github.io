@@ -118,6 +118,15 @@ dialog input:focus,dialog select:focus{border-color:#666}
       .add-cart{height:30px!important;font-size:10px!important;padding:3px 5px!important}
       .cart-fab{right:10px!important;bottom:12px!important;padding:9px 12px!important;font-size:12px!important}
     }
+
+/* Prevent temporary English loading/status text from flashing during startup */
+html:not(.app-ready) [data-loading-text],
+html:not(.app-ready) .loading-text,
+html:not(.app-ready) .loading-message,
+html:not(.app-ready) .status-message{
+  visibility:hidden !important;
+}
+
 </style>
 
 <style>
@@ -3649,6 +3658,15 @@ $("#productBuyerOffer").onchange=updateProductFormMode;
 
 <script>
 setTimeout(()=>document.querySelector(".tabs")?.classList.remove("category-settings-loading"),2000);
+</script>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+  requestAnimationFrame(function(){
+    document.documentElement.classList.add("app-ready");
+  });
+});
 </script>
 
 </body>
