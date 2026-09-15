@@ -119,13 +119,6 @@ dialog input:focus,dialog select:focus{border-color:#666}
       .cart-fab{right:10px!important;bottom:12px!important;padding:9px 12px!important;font-size:12px!important}
     }
 
-/* Prevent temporary English loading/status text from flashing during startup */
-html:not(.app-ready) [data-loading-text],
-html:not(.app-ready) .loading-text,
-html:not(.app-ready) .loading-message,
-html:not(.app-ready) .status-message{
-  visibility:hidden !important;
-}
 
 </style>
 
@@ -1309,6 +1302,38 @@ html:not(.app-ready) .status-message{
 }</style>
 
 
+
+<style id="anti-flash-critical">
+html{background:#f6eee8;}
+body{visibility:hidden;}
+html.page-visible body{visibility:visible;}
+</style>
+<script>
+(function(){
+  function showPage(){ document.documentElement.classList.add("page-visible"); }
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", function(){
+      requestAnimationFrame(showPage);
+    }, {once:true});
+  }else{
+    requestAnimationFrame(showPage);
+  }
+  /* 保底：即使某段 JS 出錯，也不會永久白畫面 */
+  setTimeout(showPage, 1200);
+})();
+</script>
+
+<style id="discord-heart-style">
+.discord-soft-heart{
+  display:block;
+  margin-left:1px;
+  color:#caa395;
+  font-size:12px;
+  font-weight:500;
+  line-height:1;
+  transform:translateY(-.4px);
+}
+</style>
 
 </head>
 <body>
@@ -3661,13 +3686,6 @@ setTimeout(()=>document.querySelector(".tabs")?.classList.remove("category-setti
 </script>
 
 
-<script>
-document.addEventListener("DOMContentLoaded", function(){
-  requestAnimationFrame(function(){
-    document.documentElement.classList.add("app-ready");
-  });
-});
-</script>
 
 </body>
 </html>
@@ -5494,13 +5512,4 @@ main.wrap{
 }
 #minimumOfferField input{margin-top:6px}
 </style>
-.discord-soft-heart{
-  display:block;
-  margin-left:1px;
-  color:#caa395;
-  font-size:12px;
-  font-weight:500;
-  line-height:1;
-  transform:translateY(-.4px);
-}
 
