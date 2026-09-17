@@ -120,6 +120,21 @@ dialog input:focus,dialog select:focus{border-color:#666}
     }
 
 
+
+/* 近期上架：總覽入口 */
+.tabs .recent-tab{
+  border-color:#d8bca8;
+}
+.tabs .recent-tab.active{
+  box-shadow:0 3px 10px rgba(112,83,68,.08);
+}
+
+
+/* 手動近期上架 */
+#productRecentFeatured{
+  accent-color:#b77b62;
+}
+
 </style>
 
 <style>
@@ -1369,7 +1384,7 @@ html.page-visible body{visibility:visible;}
 </section>
 
   <nav class="tabs category-settings-loading">
-    <button class="tab active" data-category="家具">家具</button><button class="tab" data-category="玩偶">玩偶</button><button class="tab" data-category="花盆">花盆</button><div class="category-dropdown">
+    <button class="tab recent-tab" data-category="近期上架">近期上架</button><button class="tab active" data-category="家具">家具</button><button class="tab" data-category="玩偶">玩偶</button><button class="tab" data-category="花盆">花盆</button><div class="category-dropdown">
       <button class="tab group-tab" data-group="戒指" type="button">戒指 <span class="drop-arrow">▾</span></button>
       <div class="category-menu">
         <button type="button" data-category="戒指限男">限男</button>
@@ -1499,6 +1514,10 @@ html.page-visible body{visibility:visible;}
     <div class="product-extra-options">
       <div class="option-box new-option-box">
         <div class="option-title">商品標記</div>
+        <label class="new-switch-row" for="productRecentFeatured">
+          <input id="productRecentFeatured" type="checkbox">
+          <span>近期上架</span>
+        </label>
         <label class="new-switch-row" for="productIsNew">
           <input id="productIsNew" type="checkbox">
           <span class="new-switch-box"></span>
@@ -1626,7 +1645,7 @@ let editingRealImage = "";
 let editingDemoVideoPath = "";
 
 const CATEGORY_SETTING_DOC_ID="category_settings";
-const CATEGORY_LABELS=["家具","玩偶","花盆","戒指","作物","寵物","特價區","自由出價","收購區","交換區"];
+const CATEGORY_LABELS=["近期上架","家具","玩偶","花盆","戒指","作物","寵物","特價區","自由出價","收購區","交換區"];
 let hiddenCategories=[];
 
 function topCategoryName(category){
@@ -2260,12 +2279,21 @@ function render(){
 
   const q=$("#searchInput").value.trim().toLowerCase();
   const buyMode=isBuyCategory();
+  const recentMode=activeCategory==="近期上架";
   let list = products.filter(p => {
+    if(recentMode){
+      const c=String(p.category||"");
+      return p.recentFeatured===true && c!=="收購區" && c!=="交換區";
+    }
     if(activeCategory==="全部") return true;
     if(activeCategory==="戒指") return String(p.category||"").startsWith("戒指限");
     if(activeCategory==="作物") return String(p.category||"").startsWith("作物限");
     return p.category===activeCategory;
   });
+
+  if(recentMode){
+    list.sort((a,b)=>((b?.createdAt?.seconds||0)-(a?.createdAt?.seconds||0)));
+  }
 
   if(q){
     list = list.filter(p =>
@@ -2274,28 +2302,31 @@ function render(){
     );
   }
 
-  /* 自由排序：有 sortOrder 用它；舊商品則維持原本「新到舊」 */
+  /* 一般分類維持自由排序；近期上架固定依建立時間「最新 → 最舊」 */
   const orderValue=(p)=>{
     if(Number.isFinite(Number(p?.sortOrder)))return Number(p.sortOrder);
     return -((p?.createdAt?.seconds||0)*1000);
   };
-  list.sort((a,b)=>orderValue(a)-orderValue(b));
+  if(!recentMode) list.sort((a,b)=>orderValue(a)-orderValue(b));
 
-  /* 售完商品自動沉底：保留自由排序結果，只把售完移到最後 */
-  list = list
-    .map((p,index)=>({
-      p,
-      index,
-      sold: p.category!=="收購區" && p.status!=="reserved" && (p.status==="sold" || getStock(p)<=0)
-    }))
-    .sort((a,b)=>{
-      if(a.sold!==b.sold) return a.sold ? 1 : -1;
-      return a.index-b.index;
-    })
-    .map(x=>x.p);
+  /* 一般分類售完自動沉底；近期上架保留純粹的上架時間順序 */
+  if(!recentMode){
+    list = list
+      .map((p,index)=>({
+        p,
+        index,
+        sold: p.category!=="收購區" && p.status!=="reserved" && (p.status==="sold" || getStock(p)<=0)
+      }))
+      .sort((a,b)=>{
+        if(a.sold!==b.sold) return a.sold ? 1 : -1;
+        return a.index-b.index;
+      })
+      .map(x=>x.p);
+  }
 
 $("#productCount").textContent=`${list.length} 件商品`;
   $("#sectionTitle").textContent=
+    activeCategory==="近期上架" ? "近期上架" :
     activeCategory==="全部" ? "全部商品" :
     /^戒指限[男女]$/.test(activeCategory) ? `戒指｜${activeCategory.slice(2)}` :
     /^作物限[男女]$/.test(activeCategory) ? `作物｜${activeCategory.slice(2)}` :
@@ -2651,6 +2682,12 @@ async function generateProductCatalogImage(selectedFile=null){
 
     const categoryGroups=[
       {
+        file:"近期上架",
+        title:"近期上架",
+        mode:"recent",
+        sections:[{label:"近期上架",match:p=>p.recentFeatured===true && !["收購區","交換區"].includes(String(p.category||""))}]
+      },
+      {
         file:"家具",
         title:"家具",
         sections:[{label:"家具",match:p=>String(p.category||"")==="家具"}]
@@ -2717,7 +2754,11 @@ async function generateProductCatalogImage(selectedFile=null){
       ...group,
       sections:group.sections.map(sec=>({
         ...sec,
-        items:catalogProducts.filter(sec.match).sort((a,b)=>orderValue(a)-orderValue(b))
+        items:catalogProducts.filter(sec.match).sort((a,b)=>
+          group.mode==="recent"
+            ? ((b?.createdAt?.seconds||0)-(a?.createdAt?.seconds||0))
+            : orderValue(a)-orderValue(b)
+        )
       })).filter(sec=>sec.items.length)
     })).filter(group=>group.sections.length);
 
@@ -2783,7 +2824,9 @@ async function generateProductCatalogImage(selectedFile=null){
           ? `${group.title}｜交換清單`
           : group.mode==="freeOffer"
             ? `${group.title}｜自由出價`
-            : `${group.title}｜販售清單`;
+            : group.mode==="recent"
+              ? `${group.title}｜商品總覽`
+              : `${group.title}｜販售清單`;
       ctx.fillText(catalogHeading,W/2,46);
 
       if(group.note){
@@ -2797,6 +2840,7 @@ async function generateProductCatalogImage(selectedFile=null){
           group.mode==="buy" ? "Wanted List" :
           group.mode==="exchange" ? "Exchange List" :
           group.mode==="freeOffer" ? "Make an Offer" :
+          group.mode==="recent" ? "Recently Listed" :
           "Sale List",
           W/2,76
         );
@@ -3109,6 +3153,7 @@ function openProduct(p=null){
   $("#discountText").value=p?.discountText||"";
   $("#productStock").value=getVariants(p).length?0:(Number.isFinite(Number(p?.stock))?Number(p.stock):1);
   $("#purchaseQtyText").value=p?.purchaseQtyText||"";
+  if($("#productRecentFeatured")) $("#productRecentFeatured").checked=!!p?.recentFeatured;
   if($("#productIsNew")) $("#productIsNew").checked=!!p && isNewActive(p);
   if($("#productStatus")) $("#productStatus").value=p?.status||"selling";
   loadVariantRows(p);
@@ -3320,6 +3365,7 @@ $("#productForm").addEventListener("submit", async e=>{
       category:$("#productCategory").value,
       name:isExchange ? cleanExchangeOffers[0].name : $("#productName").value.trim(),
       price:isExchange ? "交換" : ($("#productBuyerOffer")?.checked ? "自出價" : $("#productPrice").value.trim()),
+      recentFeatured:!isExchange && $("#productCategory").value!=="收購區" && !!$("#productRecentFeatured")?.checked,
       buyerOffer:!isExchange && $("#productCategory").value!=="收購區" && !!$("#productBuyerOffer")?.checked,
       minimumOffer:$("#productBuyerOffer")?.checked ? ($("#productMinimumOffer")?.value||"").trim() : "",
       discountQty:(()=>{
@@ -3479,6 +3525,7 @@ function openCatalogPicker(){
     <div class="catalog-picker-box">
       <div class="catalog-picker-title">產生哪個分類？</div>
       <div class="catalog-picker-grid">
+        <button data-cat="近期上架">近期上架</button>
         <button data-cat="家具">家具</button>
         <button data-cat="玩偶">玩偶</button>
         <button data-cat="花盆">花盆</button>
