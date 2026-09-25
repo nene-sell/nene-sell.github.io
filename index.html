@@ -45,24 +45,32 @@ button{cursor:pointer}
 .eyebrow{font-size:12px;letter-spacing:.25em;color:#aaa}
 .hero h2{font-size:clamp(42px,7vw,78px);line-height:1.02;margin:12px 0 16px;letter-spacing:-.05em}
 .hero p{color:var(--muted);line-height:1.8}
-/* 首頁使用說明 */
+/* 首頁使用說明：奶茶玫瑰色系 */
 .usage-guide{
   margin:0 0 26px;
   padding:20px 22px;
-  background:rgba(255,255,255,.72);
-  border:1px solid var(--line);
+  background:linear-gradient(135deg,#fffaf6 0%,#f7eee7 100%);
+  border:1px solid #e4d3c6;
   border-radius:22px;
-  box-shadow:0 10px 28px rgba(70,52,39,.05);
+  box-shadow:0 10px 28px rgba(111,79,61,.07);
 }
-.usage-guide h3{margin:0 0 12px;font-size:18px}
+.usage-guide h3{margin:0 0 13px;font-size:18px;color:#6f5547}
 .usage-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.usage-step{padding:13px 14px;background:var(--panel2);border-radius:15px;line-height:1.55;font-size:14px}
-.usage-step b{display:block;margin-bottom:3px;color:var(--text)}
-.usage-note{margin:12px 2px 0;color:var(--muted);font-size:13px;line-height:1.65}
+.usage-step{
+  padding:14px 15px;
+  background:#fffdfb;
+  border:1px solid #eadbd0;
+  border-radius:15px;
+  line-height:1.55;
+  font-size:14px;
+  color:#76675e;
+}
+.usage-step b{display:block;margin-bottom:4px;color:#9b6f61;font-weight:900}
+.usage-note{margin:12px 2px 0;color:#9a887d;font-size:13px;line-height:1.65}
 @media(max-width:720px){
   .usage-guide{padding:16px;margin-bottom:18px;border-radius:18px}
   .usage-steps{grid-template-columns:1fr 1fr}
-  .usage-step{padding:11px 12px;font-size:13px}
+  .usage-step{padding:12px 13px;font-size:13px}
 }
 @media(max-width:430px){.usage-steps{grid-template-columns:1fr}}
 
@@ -1369,6 +1377,16 @@ html.page-visible body{visibility:visible;}
 <style>
 .admin-tools{display:flex;align-items:center;gap:8px}.orders-dialog{width:min(720px,94vw);max-height:88vh}.orders-dialog form{max-height:82vh;overflow:auto}.orders-help{color:var(--muted);margin-top:0}.orders-list{display:grid;gap:12px}.order-card{border:1px solid var(--line);border-radius:16px;padding:14px;background:rgba(255,255,255,.62)}.order-card-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.order-status{font-size:12px;font-weight:800;padding:5px 9px;border-radius:999px;background:var(--panel2)}.status-pending{color:#8b5f35}.status-done{color:#58735b}.status-cancel{color:#9a6666}.order-sub{margin-top:7px;color:var(--muted);font-size:13px}.order-items{margin-top:10px;line-height:1.7}.order-total{margin-top:8px;font-weight:800}.order-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}#ordersBtn{padding:8px 12px;border-radius:999px;position:relative}.orders-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;margin-left:5px;border-radius:999px;background:#b96f62;color:#fff;font-size:11px;font-weight:900;vertical-align:middle}.orders-badge.hidden{display:none}.order-delete{margin-left:auto}@media(max-width:520px){#ordersBtn{font-size:12px;padding:7px 9px}}
 </style>
+
+<style id="order-image-enhancement">
+.order-items{display:grid;gap:8px;margin-top:10px}
+.order-item-row{display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.55)}
+.order-item-thumb{width:58px;height:58px;flex:0 0 58px;object-fit:contain;border-radius:9px;background:#f4ebe3}
+.order-item-thumb-empty{display:grid;place-items:center;font-size:11px;color:var(--muted)}
+.order-item-info{min-width:0;display:grid;gap:3px}
+.order-item-info b{overflow-wrap:anywhere}
+.order-item-info span{font-size:12px;color:var(--muted)}
+</style>
 </head>
 <body>
 <header class="topbar">
@@ -1651,8 +1669,8 @@ html.page-visible body{visibility:visible;}
       </div>
     </div>
     <div class="cart-actions">
-      <button id="autoScreenshotBtn" class="btn primary" type="button">送出並自動截圖</button>
-      <button id="manualScreenshotBtn" class="btn" type="button">送出自己截圖</button>
+      <button id="autoScreenshotBtn" class="btn primary" type="button">送出並下載截圖</button>
+      <button id="manualScreenshotBtn" class="btn" type="button">送出後自己截圖</button>
       <button id="clearCartBtn" class="btn" type="button">清空清單</button>
     </div>
   </form>
@@ -3820,7 +3838,14 @@ function renderOrders(){
   empty.classList.toggle("hidden",rows.length>0);
   box.innerHTML=rows.map(o=>{
     const items=Array.isArray(o.items)?o.items:[];
-    const itemText=items.map(i=>`${esc(i.name||"商品")}${i.variant?`（${esc(i.variant)}）`:""} × ${Math.max(1,Number(i.qty)||1)}`).join("<br>");
+    const itemText=items.map(i=>{
+      const product=products.find(p=>p.id===i.id);
+      const variants=product?getVariants(product):[];
+      const variant=variants.find(v=>v.name===i.variant);
+      const imageSrc=(variant?.imageData || product?.imageData || product?.image || product?.img || "");
+      const imageHtml=imageSrc?`<img class="order-item-thumb" src="${esc(imageSrc)}" alt="">`:`<div class="order-item-thumb order-item-thumb-empty">無圖</div>`;
+      return `<div class="order-item-row">${imageHtml}<div class="order-item-info"><b>${esc(i.name||"商品")}</b>${i.variant?`<span>款式：${esc(i.variant)}</span>`:""}<span>數量：${Math.max(1,Number(i.qty)||1)}</span></div></div>`;
+    }).join("");
     const total=items.reduce((n,i)=>n+(Number(i.price)||0)*(Number(i.qty)||1),0);
     const pending=o.status==="待交易";
     return `<article class="order-card">
