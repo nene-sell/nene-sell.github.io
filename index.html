@@ -1563,7 +1563,7 @@ html.page-visible body{visibility:visible;}
 </dialog>
 
 
-<button id="cartFab" class="cart-fab" type="button">交易清單 <span id="cartCount" class="cart-count">0</span></button>
+<button id="cartFab" class="cart-fab" type="button">購物車 <span id="cartCount" class="cart-count">0</span></button>
 
 
 <dialog id="buyerOfferDialog" class="buyer-offer-dialog">
@@ -1589,13 +1589,35 @@ html.page-visible body{visibility:visible;}
       <p id="orderHint" style="margin:6px 0 0">請截圖此畫面傳給我確認</p>
       <div id="orderDate" class="order-date"></div>
     </div>
-    <h3 id="cartDialogHeading">交易清單</h3>
+    <h3 id="cartDialogHeading">購物車</h3>
     <p id="cartDialogDesc">選好想要的商品後，可在這裡調整數量並查看總金額。</p>
     <div id="cartList" class="cart-list"></div>
     <div id="cartEmpty" class="cart-empty">目前還沒有加入商品。</div>
     <div id="cartSummary" class="cart-summary hidden"></div>
+    <div id="checkoutInfo" class="checkout-info">
+      <div class="checkout-field">
+        <span class="checkout-label">交易角色</span>
+        <div class="checkout-options">
+          <label><input type="radio" name="tradeGender" value="男角"> 男角</label>
+          <label><input type="radio" name="tradeGender" value="女角"> 女角</label>
+        </div>
+      </div>
+      <div class="checkout-field">
+        <span class="checkout-label">付款方式</span>
+        <div class="checkout-options">
+          <label><input type="radio" name="paymentMethod" value="糖果"> 糖果</label>
+          <label><input type="radio" name="paymentMethod" value="轉帳"> 轉帳</label>
+        </div>
+      </div>
+      <div id="orderMeta" class="order-meta hidden">
+        <span>訂單編號：<b id="orderNumber">—</b></span>
+        <span>訂單狀態：<b id="orderStatus">待交易</b></span>
+        <span>交易角色：<b id="orderGender">—</b></span>
+        <span>付款方式：<b id="orderPayment">—</b></span>
+      </div>
+    </div>
     <div class="cart-actions">
-      <button id="screenshotBtn" class="btn primary" type="button">確認無誤，前往截圖</button>
+      <button id="screenshotBtn" class="btn primary" type="button">確認無誤・完成下單並儲存圖片</button>
       <button id="clearCartBtn" class="btn" type="button">清空清單</button>
     </div>
   </form>
@@ -1603,6 +1625,7 @@ html.page-visible body{visibility:visible;}
 
 <div id="toast" class="toast">已儲存</div>
 
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
@@ -1612,6 +1635,7 @@ import {
   getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, setDoc,
   onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAHhPD_c7mJbzQKF1YnrySpBSLLs-IecAw",
@@ -1627,6 +1651,8 @@ const ADMIN_UID = "m6CfH9lsrmbG4Mw8SzgmlZL8R2i1";
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const functions = getFunctions(app, "asia-east1");
+const createOrder = httpsCallable(functions, "createOrder");
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -1875,7 +1901,7 @@ function updateCartFab(){
   cartViewMode=buy ? "buy" : "sale";
   const list=buy ? offerCart : cart;
   const count=list.reduce((sum,x)=>sum+(Number(x.qty)||0),0);
-  $("#cartFab").innerHTML=`${buy?"出售清單":"交易清單"} <span id="cartCount" class="cart-count">${count}</span>`;
+  $("#cartFab").innerHTML=`${buy?"出售清單":"購物車"} <span id="cartCount" class="cart-count">${count}</span>`;
 }
 
 async function changeStock(p, delta){
@@ -1920,7 +1946,7 @@ function addToList(p, qty, mode="sale", variant=""){
   else list.push({id:p.id,qty:Math.min(n,limit),variant:variant||""});
   cartViewMode=mode;
   renderCart(); updateCartFab();
-  toast(mode==="buy"?"已加入出售清單":"已加入交易清單");
+  toast(mode==="buy"?"已加入出售清單":"已加入購物車");
 }
 
 function renderCart(){
@@ -1941,7 +1967,7 @@ function renderCart(){
 
   $("#orderTitle").textContent=buy ? "出售確認單" : "商品確認單";
   $("#orderHint").textContent=buy ? "請截圖此畫面傳給我確認收購" : "請截圖此畫面傳給我確認";
-  $("#cartDialogHeading").textContent=buy ? "出售清單" : "交易清單";
+  $("#cartDialogHeading").textContent=buy ? "出售清單" : "購物車";
   $("#cartDialogDesc").textContent=buy
     ? "選好你有的商品後，可在這裡調整提供數量並查看預計可得金額。"
     : "選好想要的商品後，可在這裡調整數量並查看總金額。";
@@ -3611,6 +3637,39 @@ document.addEventListener("click",()=>closeCategoryMenus());
 $$("[data-close]").forEach(btn=>btn.onclick=()=>document.getElementById(btn.dataset.close).close());
 
 
+let currentOrderNumber="";
+function makeOrderNumber(){
+  const now=new Date();
+  const y=now.getFullYear();
+  const m=String(now.getMonth()+1).padStart(2,"0");
+  const d=String(now.getDate()).padStart(2,"0");
+  const hh=String(now.getHours()).padStart(2,"0");
+  const mm=String(now.getMinutes()).padStart(2,"0");
+  const ss=String(now.getSeconds()).padStart(2,"0");
+  return `${y}${m}${d}-${hh}${mm}${ss}`;
+}
+function checkoutChoice(name){
+  return document.querySelector(`input[name="${name}"]:checked`)?.value||"";
+}
+function resetOrderMeta(){
+  currentOrderNumber="";
+  $("#orderMeta")?.classList.add("hidden");
+  if($("#orderNumber")) $("#orderNumber").textContent="—";
+  if($("#orderStatus")) $("#orderStatus").textContent="待交易";
+}
+function prepareOrderMeta(){
+  const gender=checkoutChoice("tradeGender");
+  const payment=checkoutChoice("paymentMethod");
+  if(!gender) throw new Error("請先選擇男角或女角交易");
+  if(!payment) throw new Error("請先選擇糖果或轉帳");
+  $("#orderNumber").textContent="建立中…";
+  $("#orderStatus").textContent="待交易";
+  $("#orderGender").textContent=gender;
+  $("#orderPayment").textContent=payment;
+  $("#orderMeta").classList.remove("hidden");
+  return {gender,payment,status:"待交易"};
+}
+
 function setOrderDate(){
   const now=new Date();
   const y=now.getFullYear();
@@ -3624,6 +3683,7 @@ function setOrderDate(){
 $("#cartFab").onclick=()=>{
   cartViewMode=isBuyCategory() ? "buy" : "sale";
   renderCart();
+  resetOrderMeta();
   setOrderDate();
   $("#cartDialog").showModal();
 };
@@ -3634,19 +3694,81 @@ $("#clearCartBtn").onclick=()=>{
     toast("已清空出售清單");
   }else{
     cart=[];
-    toast("已清空交易清單");
+    toast("已清空購物車");
   }
   renderCart();
   render();
 };
 
-$("#screenshotBtn").onclick=()=>{
-  const list=cartViewMode==="buy" ? offerCart : cart;
-  if(!list.length){toast(cartViewMode==="buy"?"出售清單是空的":"交易清單是空的");return;}
-  setOrderDate();
-  $("#cartDialog").close();
+async function saveOrderImage(){
+  if(typeof window.html2canvas!=="function") throw new Error("圖片工具尚未載入，請重新整理後再試");
   document.body.classList.add("screenshot-mode");
   $("#cartDialog").setAttribute("open","");
+  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+  const target=$("#cartDialog form");
+  const canvas=await window.html2canvas(target,{backgroundColor:"#f8f1eb",scale:Math.min(2,window.devicePixelRatio||1),useCORS:true,logging:false});
+  document.body.classList.remove("screenshot-mode");
+  $("#cartDialog").removeAttribute("open");
+  const stamp=new Date().toISOString().slice(0,19).replace(/[T:]/g,"-");
+  const a=document.createElement("a");
+  a.download=`內內-商品確認單-${currentOrderNumber||stamp}.png`;
+  a.href=canvas.toDataURL("image/png");
+  document.body.appendChild(a);a.click();a.remove();
+}
+
+async function checkoutSaleCart(orderInfo){
+  const items=cart.map(item=>({
+    id:String(item.id||""),
+    qty:Math.max(1,Math.floor(Number(item.qty)||1)),
+    variant:String(item.variant||"")
+  }));
+  if(!items.length) throw new Error("購物車是空的");
+  const result=await createOrder({
+    gender:orderInfo.gender,
+    payment:orderInfo.payment,
+    items
+  });
+  const data=result?.data||{};
+  if(!data.orderNumber) throw new Error("訂單建立失敗，請稍後再試");
+  currentOrderNumber=data.orderNumber;
+  $("#orderNumber").textContent=currentOrderNumber;
+  $("#orderStatus").textContent=data.status||"待交易";
+  $("#orderGender").textContent=orderInfo.gender;
+  $("#orderPayment").textContent=orderInfo.payment;
+  $("#orderMeta").classList.remove("hidden");
+  return data;
+}
+
+$("#screenshotBtn").onclick=async()=>{
+  const list=cartViewMode==="buy" ? offerCart : cart;
+  if(!list.length){toast(cartViewMode==="buy"?"出售清單是空的":"購物車是空的");return;}
+  const btn=$("#screenshotBtn");
+  btn.disabled=true;
+  const oldText=btn.textContent;
+  btn.textContent=cartViewMode==="buy"?"正在產生確認圖片…":"正在確認庫存…";
+  try{
+    setOrderDate();
+    const orderInfo=cartViewMode==="buy" ? null : prepareOrderMeta();
+    renderCart();
+    if(cartViewMode!=="buy") await checkoutSaleCart(orderInfo);
+    $("#cartDialog").close();
+    await saveOrderImage();
+    if(cartViewMode==="buy") offerCart=[]; else cart=[];
+    saveLists();
+    renderCart();render();updateCartFab();
+    if(cartViewMode!=="buy"){
+      document.querySelectorAll('input[name="tradeGender"],input[name="paymentMethod"]').forEach(x=>x.checked=false);
+    }
+    toast(cartViewMode==="buy"?"確認圖片已產生":"下單完成，訂單狀態：待交易");
+  }catch(err){
+    console.error(err);
+    document.body.classList.remove("screenshot-mode");
+    $("#cartDialog").removeAttribute("open");
+    if(!$("#cartDialog").open) $("#cartDialog").showModal();
+    alert(err?.message||"下單失敗，請稍後再試");
+  }finally{
+    btn.disabled=false;btn.textContent=oldText;
+  }
 };
 
 document.addEventListener("keydown",e=>{
@@ -3729,6 +3851,11 @@ setTimeout(()=>document.querySelector(".tabs")?.classList.remove("category-setti
 </script>
 
 
+
+
+<style>
+.checkout-info{margin-top:14px;display:grid;gap:10px}.checkout-field{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;border:1px solid #d7c7b8;border-radius:12px;background:#fffaf6}.checkout-label{font-weight:900;color:#4d392f}.checkout-options{display:flex;gap:14px;flex-wrap:wrap}.checkout-options label{display:flex;align-items:center;gap:5px;font-weight:800;color:#5e493d;cursor:pointer}.order-meta{margin-top:2px;padding:13px 15px;border:1px solid #bda38e;border-radius:12px;background:#eadbcf;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;color:#49372d;font-size:13px}.order-meta b{font-weight:900}.screenshot-mode .checkout-field{display:none!important}.screenshot-mode .order-meta{display:grid!important;background:#eadbcf!important}.screenshot-mode #checkoutInfo{margin-top:10px}@media(max-width:560px){.checkout-field{align-items:flex-start;flex-direction:column}.order-meta{grid-template-columns:1fr}}
+</style>
 
 </body>
 </html>
