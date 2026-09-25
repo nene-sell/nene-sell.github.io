@@ -1633,9 +1633,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import {
   getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, setDoc,
-  onSnapshot, serverTimestamp
+  onSnapshot, serverTimestamp, runTransaction, getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAHhPD_c7mJbzQKF1YnrySpBSLLs-IecAw",
@@ -1651,8 +1650,6 @@ const ADMIN_UID = "m6CfH9lsrmbG4Mw8SzgmlZL8R2i1";
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const functions = getFunctions(app, "asia-east1");
-const createOrder = httpsCallable(functions, "createOrder");
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -3723,20 +3720,60 @@ async function checkoutSaleCart(orderInfo){
     variant:String(item.variant||"")
   }));
   if(!items.length) throw new Error("購物車是空的");
-  const result=await createOrder({
-    gender:orderInfo.gender,
-    payment:orderInfo.payment,
-    items
+
+  const now=new Date();
+  const pad=n=>String(n).padStart(2,"0");
+  const orderNumber=`${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}${String(now.getMilliseconds()).padStart(3,"0")}`;
+  const orderRef=doc(db,"orders",orderNumber);
+
+  await runTransaction(db, async tx=>{
+    // Firestore transaction 規定所有讀取必須先完成，才能開始寫入。
+    // 公開買家也不需要讀取 orders；訂單編號本身已包含毫秒，直接建立即可。
+    const productRows=[];
+    for(const item of items){
+      const ref=doc(db,"products",item.id);
+      const snap=await tx.get(ref);
+      productRows.push({item,ref,snap});
+    }
+
+    const orderItems=[];
+    for(const row of productRows){
+      const {item,ref,snap}=row;
+      if(!snap.exists()) throw new Error("有商品已下架，請重新整理購物車");
+      const p={id:snap.id,...snap.data()};
+      const variants=getVariants(p);
+      if(variants.length){
+        const idx=variants.findIndex(v=>v.name===item.variant);
+        if(idx<0) throw new Error(`「${p.name||"商品"}」的款式已變更`);
+        if(variants[idx].stock<item.qty) throw new Error(`「${p.name||"商品"} ${item.variant}」庫存不足`);
+        variants[idx]={...variants[idx],stock:variants[idx].stock-item.qty};
+        tx.update(ref,{variants,stock:variants.reduce((a,v)=>a+v.stock,0),updatedAt:serverTimestamp()});
+      }else{
+        const stock=getStock(p);
+        if(stock<item.qty) throw new Error(`「${p.name||"商品"}」庫存不足`);
+        tx.update(ref,{stock:stock-item.qty,updatedAt:serverTimestamp()});
+      }
+      orderItems.push({id:item.id,name:String(p.name||"商品"),variant:item.variant,qty:item.qty,price:Number(p.price)||0});
+    }
+
+    tx.set(orderRef,{
+      orderNumber,
+      status:"待交易",
+      gender:orderInfo.gender,
+      payment:orderInfo.payment,
+      items:orderItems,
+      createdAt:serverTimestamp(),
+      createdAtText:`${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+    });
   });
-  const data=result?.data||{};
-  if(!data.orderNumber) throw new Error("訂單建立失敗，請稍後再試");
-  currentOrderNumber=data.orderNumber;
+
+  currentOrderNumber=orderNumber;
   $("#orderNumber").textContent=currentOrderNumber;
-  $("#orderStatus").textContent=data.status||"待交易";
+  $("#orderStatus").textContent="待交易";
   $("#orderGender").textContent=orderInfo.gender;
   $("#orderPayment").textContent=orderInfo.payment;
   $("#orderMeta").classList.remove("hidden");
-  return data;
+  return {orderNumber,status:"待交易"};
 }
 
 $("#screenshotBtn").onclick=async()=>{
