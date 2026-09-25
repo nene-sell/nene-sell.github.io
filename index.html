@@ -1680,8 +1680,8 @@ html.page-visible body{visibility:visible;}
       </div>
     </div>
     <div class="cart-actions">
-      <button id="autoScreenshotBtn" class="btn primary" type="button">送出並下載截圖</button>
-      <button id="manualScreenshotBtn" class="btn" type="button">送出後自己截圖</button>
+      <button id="autoScreenshotBtn" class="btn primary" type="button">送出並自動截圖</button>
+      <div class="manual-shot-wrap"><button id="manualScreenshotBtn" class="btn" type="button">送出後自己截圖</button><span class="manual-shot-hint">手機使用者推薦自己截圖</span></div>
       <button id="clearCartBtn" class="btn" type="button">清空清單</button>
     </div>
   </form>
@@ -2526,7 +2526,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
                 : limit===0
                 ? (isBuy?"已收齊":"售完")
                 : selectedQty>0
-                  ? (isBuy?"更新出售清單":isBuyerOfferProduct(p)?"重新出價":"更新清單")
+                  ? (isBuy?"更新出售清單":isBuyerOfferProduct(p)?"重新出價":"更新購物車")
                   : (isBuy?"我有這個":isBuyerOfferProduct(p)?"我要出價":"加入購物車")
             }</button>
           </div>
@@ -4303,6 +4303,9 @@ dialog select option{
 }
 .cart-actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
 .cart-actions .btn{flex:1;min-width:150px}
+.manual-shot-wrap{flex:1;min-width:150px;display:flex;flex-direction:column;gap:5px;align-items:stretch}
+.manual-shot-wrap .btn{width:100%;min-width:0}
+.manual-shot-hint{display:block;text-align:center;font-size:12px;line-height:1.35;color:#8b7f76;font-weight:700}
 .cart-empty{text-align:center;color:#7a695d;padding:28px 10px}
 
 /* 截圖模式 */
