@@ -1345,6 +1345,9 @@ html.page-visible body{visibility:visible;}
 }
 </style>
 
+<style>
+.admin-tools{display:flex;align-items:center;gap:8px}.orders-dialog{width:min(720px,94vw);max-height:88vh}.orders-dialog form{max-height:82vh;overflow:auto}.orders-help{color:var(--muted);margin-top:0}.orders-list{display:grid;gap:12px}.order-card{border:1px solid var(--line);border-radius:16px;padding:14px;background:rgba(255,255,255,.62)}.order-card-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.order-status{font-size:12px;font-weight:800;padding:5px 9px;border-radius:999px;background:var(--panel2)}.status-pending{color:#8b5f35}.status-done{color:#58735b}.status-cancel{color:#9a6666}.order-sub{margin-top:7px;color:var(--muted);font-size:13px}.order-items{margin-top:10px;line-height:1.7}.order-total{margin-top:8px;font-weight:800}.order-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}#ordersBtn{padding:8px 12px;border-radius:999px}@media(max-width:520px){#ordersBtn{font-size:12px;padding:7px 9px}}
+</style>
 </head>
 <body>
 <header class="topbar">
@@ -1360,7 +1363,7 @@ html.page-visible body{visibility:visible;}
   </div>
 </div>
 
-  <button id="adminBtn" class="btn" title="管理員登入" aria-label="管理員登入">⚙️</button>
+  <div class="admin-tools"><button id="ordersBtn" class="btn hidden" type="button">訂單</button><button id="adminBtn" class="btn" title="管理員登入" aria-label="管理員登入">⚙️</button></div>
 </header>
 
 <main class="wrap">
@@ -1620,6 +1623,16 @@ html.page-visible body{visibility:visible;}
       <button id="screenshotBtn" class="btn primary" type="button">確認無誤・完成下單並儲存圖片</button>
       <button id="clearCartBtn" class="btn" type="button">清空清單</button>
     </div>
+  </form>
+</dialog>
+
+<dialog id="ordersDialog" class="orders-dialog">
+  <form method="dialog" onsubmit="return false;">
+    <button type="button" class="close" data-close="ordersDialog">×</button>
+    <h3>訂單管理</h3>
+    <p class="orders-help">買家下單後會先顯示「待交易」，只有你按完成交易時才會扣庫存。</p>
+    <div id="ordersList" class="orders-list"></div>
+    <div id="ordersEmpty" class="cart-empty">目前沒有訂單。</div>
   </form>
 </dialog>
 
@@ -3488,8 +3501,12 @@ $("#adminBtn").onclick=async()=>{
 
 onAuthStateChanged(auth,user=>{
   currentUser = user && user.uid===ADMIN_UID ? user : null;
+  $("#ordersBtn")?.classList.toggle("hidden",!isAdmin());
+  startOrdersListener();
   render();
 });
+
+$("#ordersBtn")?.addEventListener("click",()=>{ if(isAdmin()){renderOrders();$("#ordersDialog").showModal();} });
 
 
 $("#categorySettingsBtn")?.addEventListener("click",()=>{
@@ -3721,50 +3738,34 @@ async function checkoutSaleCart(orderInfo){
   }));
   if(!items.length) throw new Error("購物車是空的");
 
+  // 免費版安全流程：買家只建立待交易訂單，不允許直接修改商品庫存。
+  // 先用目前公開商品資料確認畫面上的庫存與訂單內容；真正扣庫存由管理員按「完成交易」時執行。
+  const orderItems=[];
+  for(const item of items){
+    const p=products.find(x=>String(x.id)===item.id);
+    if(!p) throw new Error("有商品已下架，請重新整理購物車");
+    const variants=getVariants(p);
+    if(variants.length){
+      const v=variants.find(v=>v.name===item.variant);
+      if(!v) throw new Error(`「${p.name||"商品"}」的款式已變更`);
+      if(v.stock<item.qty) throw new Error(`「${p.name||"商品"} ${item.variant}」庫存不足`);
+    }else if(getStock(p)<item.qty){
+      throw new Error(`「${p.name||"商品"}」庫存不足`);
+    }
+    orderItems.push({id:item.id,name:String(p.name||"商品"),variant:item.variant,qty:item.qty,price:Number(p.price)||0});
+  }
+
   const now=new Date();
   const pad=n=>String(n).padStart(2,"0");
   const orderNumber=`${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}${String(now.getMilliseconds()).padStart(3,"0")}`;
-  const orderRef=doc(db,"orders",orderNumber);
-
-  await runTransaction(db, async tx=>{
-    // Firestore transaction 規定所有讀取必須先完成，才能開始寫入。
-    // 公開買家也不需要讀取 orders；訂單編號本身已包含毫秒，直接建立即可。
-    const productRows=[];
-    for(const item of items){
-      const ref=doc(db,"products",item.id);
-      const snap=await tx.get(ref);
-      productRows.push({item,ref,snap});
-    }
-
-    const orderItems=[];
-    for(const row of productRows){
-      const {item,ref,snap}=row;
-      if(!snap.exists()) throw new Error("有商品已下架，請重新整理購物車");
-      const p={id:snap.id,...snap.data()};
-      const variants=getVariants(p);
-      if(variants.length){
-        const idx=variants.findIndex(v=>v.name===item.variant);
-        if(idx<0) throw new Error(`「${p.name||"商品"}」的款式已變更`);
-        if(variants[idx].stock<item.qty) throw new Error(`「${p.name||"商品"} ${item.variant}」庫存不足`);
-        variants[idx]={...variants[idx],stock:variants[idx].stock-item.qty};
-        tx.update(ref,{variants,stock:variants.reduce((a,v)=>a+v.stock,0),updatedAt:serverTimestamp()});
-      }else{
-        const stock=getStock(p);
-        if(stock<item.qty) throw new Error(`「${p.name||"商品"}」庫存不足`);
-        tx.update(ref,{stock:stock-item.qty,updatedAt:serverTimestamp()});
-      }
-      orderItems.push({id:item.id,name:String(p.name||"商品"),variant:item.variant,qty:item.qty,price:Number(p.price)||0});
-    }
-
-    tx.set(orderRef,{
-      orderNumber,
-      status:"待交易",
-      gender:orderInfo.gender,
-      payment:orderInfo.payment,
-      items:orderItems,
-      createdAt:serverTimestamp(),
-      createdAtText:`${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
-    });
+  await setDoc(doc(db,"orders",orderNumber),{
+    orderNumber,
+    status:"待交易",
+    gender:orderInfo.gender,
+    payment:orderInfo.payment,
+    items:orderItems,
+    createdAt:serverTimestamp(),
+    createdAtText:`${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
   });
 
   currentOrderNumber=orderNumber;
@@ -3774,6 +3775,80 @@ async function checkoutSaleCart(orderInfo){
   $("#orderPayment").textContent=orderInfo.payment;
   $("#orderMeta").classList.remove("hidden");
   return {orderNumber,status:"待交易"};
+}
+
+let adminOrders=[];
+let stopOrdersListener=null;
+function renderOrders(){
+  const box=$("#ordersList"), empty=$("#ordersEmpty");
+  if(!box)return;
+  const rows=[...adminOrders].sort((a,b)=>String(b.createdAtText||b.orderNumber||"").localeCompare(String(a.createdAtText||a.orderNumber||"")));
+  empty.classList.toggle("hidden",rows.length>0);
+  box.innerHTML=rows.map(o=>{
+    const items=Array.isArray(o.items)?o.items:[];
+    const itemText=items.map(i=>`${esc(i.name||"商品")}${i.variant?`（${esc(i.variant)}）`:""} × ${Math.max(1,Number(i.qty)||1)}`).join("<br>");
+    const total=items.reduce((n,i)=>n+(Number(i.price)||0)*(Number(i.qty)||1),0);
+    const pending=o.status==="待交易";
+    return `<article class="order-card">
+      <div class="order-card-head"><b>${esc(o.orderNumber||o.id||"")}</b><span class="order-status status-${pending?"pending":o.status==="已完成"?"done":"cancel"}">${esc(o.status||"待交易")}</span></div>
+      <div class="order-sub">${esc(o.createdAtText||"")}　${esc(o.gender||"")}　${esc(o.payment||"")}</div>
+      <div class="order-items">${itemText||"—"}</div>
+      <div class="order-total">金額：${total}</div>
+      ${pending?`<div class="order-actions"><button class="btn primary" type="button" data-order-done="${esc(o.id)}">完成交易</button><button class="btn" type="button" data-order-cancel="${esc(o.id)}">取消訂單</button></div>`:""}
+    </article>`;
+  }).join("");
+  box.querySelectorAll("[data-order-done]").forEach(b=>b.onclick=()=>completeOrder(b.dataset.orderDone,b));
+  box.querySelectorAll("[data-order-cancel]").forEach(b=>b.onclick=()=>cancelOrder(b.dataset.orderCancel,b));
+}
+function startOrdersListener(){
+  if(stopOrdersListener){stopOrdersListener();stopOrdersListener=null;}
+  adminOrders=[];renderOrders();
+  if(!isAdmin())return;
+  stopOrdersListener=onSnapshot(collection(db,"orders"),snap=>{
+    adminOrders=snap.docs.map(d=>({id:d.id,...d.data()}));renderOrders();
+  },err=>{console.error(err);toast("訂單讀取失敗");});
+}
+async function completeOrder(orderId,btn){
+  if(!isAdmin()||!orderId)return;
+  btn.disabled=true;btn.textContent="處理中…";
+  try{
+    await runTransaction(db,async tx=>{
+      const oref=doc(db,"orders",orderId);
+      const osnap=await tx.get(oref);
+      if(!osnap.exists())throw new Error("找不到這筆訂單");
+      const order=osnap.data();
+      if(order.status!=="待交易")throw new Error("這筆訂單已處理");
+      const rows=[];
+      for(const item of (order.items||[])){
+        const ref=doc(db,"products",String(item.id||""));
+        const snap=await tx.get(ref);rows.push({item,ref,snap});
+      }
+      for(const {item,ref,snap} of rows){
+        if(!snap.exists())throw new Error(`「${item.name||"商品"}」已下架`);
+        const p={id:snap.id,...snap.data()}, qty=Math.max(1,Number(item.qty)||1), vars=getVariants(p);
+        if(vars.length){
+          const idx=vars.findIndex(v=>v.name===String(item.variant||""));
+          if(idx<0||vars[idx].stock<qty)throw new Error(`「${p.name||"商品"}${item.variant?` ${item.variant}`:""}」庫存不足`);
+          vars[idx]={...vars[idx],stock:vars[idx].stock-qty};
+          tx.update(ref,{variants:vars,stock:vars.reduce((n,v)=>n+v.stock,0),updatedAt:serverTimestamp()});
+        }else{
+          const stock=getStock(p);if(stock<qty)throw new Error(`「${p.name||"商品"}」庫存不足`);
+          tx.update(ref,{stock:stock-qty,updatedAt:serverTimestamp()});
+        }
+      }
+      tx.update(oref,{status:"已完成",completedAt:serverTimestamp()});
+    });
+    toast("交易完成，庫存已扣除");
+  }catch(e){console.error(e);alert(e?.message||"完成交易失敗");}
+  finally{btn.disabled=false;btn.textContent="完成交易";}
+}
+async function cancelOrder(orderId,btn){
+  if(!isAdmin()||!orderId)return;
+  if(!confirm("確定要取消這筆訂單嗎？"))return;
+  btn.disabled=true;
+  try{await updateDoc(doc(db,"orders",orderId),{status:"已取消",cancelledAt:serverTimestamp()});toast("訂單已取消");}
+  catch(e){console.error(e);alert(e?.message||"取消失敗");}
+  finally{btn.disabled=false;}
 }
 
 $("#screenshotBtn").onclick=async()=>{
