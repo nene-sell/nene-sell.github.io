@@ -49,24 +49,26 @@ button{cursor:pointer}
 .usage-guide{
   margin:0 0 26px;
   padding:20px 22px;
-  background:linear-gradient(135deg,#fffaf6 0%,#f7eee7 100%);
-  border:1px solid #e4d3c6;
+  background:linear-gradient(135deg,#d8c0ae 0%,#c9aa94 100%);
+  border:1px solid #b79279;
   border-radius:22px;
-  box-shadow:0 10px 28px rgba(111,79,61,.07);
+  box-shadow:0 10px 28px rgba(86,58,43,.14);
 }
-.usage-guide h3{margin:0 0 13px;font-size:18px;color:#6f5547}
+.usage-guide h3{margin:0 0 13px;font-size:18px;color:#4f382d}
 .usage-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .usage-step{
   padding:14px 15px;
-  background:#fffdfb;
-  border:1px solid #eadbd0;
+  background:#f1e3d8;
+  border:1px solid #c6a58f;
   border-radius:15px;
   line-height:1.55;
   font-size:14px;
-  color:#76675e;
+  color:#5f4b40;
 }
-.usage-step b{display:block;margin-bottom:4px;color:#9b6f61;font-weight:900}
-.usage-note{margin:12px 2px 0;color:#9a887d;font-size:13px;line-height:1.65}
+.usage-step-icon{width:30px;height:30px;margin-bottom:8px;color:#754d3f;display:flex;align-items:center;justify-content:center}
+.usage-step-icon svg{width:27px;height:27px;display:block;stroke:currentColor}
+.usage-step b{display:block;margin-bottom:4px;color:#754d3f;font-weight:900}
+.usage-note{margin:12px 2px 0;color:#624d42;font-size:13px;line-height:1.65}
 @media(max-width:720px){
   .usage-guide{padding:16px;margin-bottom:18px;border-radius:18px}
   .usage-steps{grid-template-columns:1fr 1fr}
@@ -1415,9 +1417,18 @@ html.page-visible body{visibility:visible;}
   <section class="usage-guide" aria-labelledby="usageGuideTitle">
     <h3 id="usageGuideTitle">使用說明 ♡</h3>
     <div class="usage-steps">
-      <div class="usage-step"><b>1. 加入購物車</b><span>選款式與數量加入購物車</span></div>
-      <div class="usage-step"><b>2. 確認訂單</b><span>確認商品款式與數量後選擇男或女交易，並選擇支付方式</span></div>
-      <div class="usage-step"><b>3. 完成</b><span>確認無誤後可選自動截圖或自己截圖，再把截圖私訊給我</span></div>
+      <div class="usage-step">
+        <div class="usage-step-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1"/><circle cx="19" cy="20" r="1"/><path d="M3 4h2l2.4 10.2a2 2 0 0 0 2 1.5h7.8a2 2 0 0 0 2-1.6L21 7H6"/></svg></div>
+        <b>1. 加入購物車</b><span>選款式與數量加入購物車</span>
+      </div>
+      <div class="usage-step">
+        <div class="usage-step-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h6"/><path d="M9 3h6a2 2 0 0 1 2 2v1h2v15H5V6h2V5a2 2 0 0 1 2-2Z"/><path d="M8 11h8M8 15h6"/></svg></div>
+        <b>2. 確認訂單</b><span>確認商品款式與數量後選擇男或女交易，並選擇支付方式</span>
+      </div>
+      <div class="usage-step">
+        <div class="usage-step-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3v11H4Z"/><circle cx="12" cy="13.5" r="3.5"/><path d="m17.5 5.5 1 1 2-2"/></svg></div>
+        <b>3. 完成並截圖</b><span>確認無誤後可選下載截圖或自己截圖，再把截圖私訊給我</span>
+      </div>
     </div>
     <p class="usage-note">※ 訂單送出不代表交易已完成；實際交易內容以雙方私訊確認為準。</p>
   </section>
