@@ -1685,6 +1685,10 @@ html.page-visible body{visibility:visible;}
       <button id="clearCartBtn" class="btn" type="button">清空清單</button>
     </div>
   </form>
+  <div id="postSubmitReview" class="post-submit-review" aria-live="polite">
+    <span>訂單已送出 ✓　確認完成後即可關閉此畫面</span>
+    <button id="closeSubmittedOrderBtn" class="btn" type="button">關閉</button>
+  </div>
 </dialog>
 
 <dialog id="ordersDialog" class="orders-dialog">
@@ -3776,6 +3780,7 @@ $("#clearCartBtn").onclick=()=>{
 };
 
 async function saveOrderImage(){
+  $("#postSubmitReview")?.classList.remove("show");
   if(typeof window.html2canvas!=="function") throw new Error("圖片工具尚未載入，請重新整理後再試");
   document.body.classList.add("screenshot-mode");
   $("#cartDialog").setAttribute("open","");
@@ -3787,6 +3792,7 @@ async function saveOrderImage(){
   a.download=`內內-商品確認單-${currentOrderNumber||stamp}.png`;
   a.href=canvas.toDataURL("image/png");
   document.body.appendChild(a);a.click();a.remove();
+  $("#postSubmitReview")?.classList.add("show");
 }
 
 async function checkoutSaleCart(orderInfo){
@@ -3956,6 +3962,7 @@ function clearSubmittedList(){
 }
 
 async function showManualScreenshot(){
+  $("#postSubmitReview")?.classList.add("show");
   document.body.classList.add("screenshot-mode");
   $("#cartDialog").setAttribute("open","");
   await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
@@ -3964,6 +3971,7 @@ async function showManualScreenshot(){
 
 function closeManualScreenshot(){
   document.body.classList.remove("screenshot-mode");
+  $("#postSubmitReview")?.classList.remove("show");
   $("#cartDialog").removeAttribute("open");
   if(pendingManualOrderCleanup){
     pendingManualOrderCleanup=false;
@@ -4006,6 +4014,7 @@ async function submitOrderWithScreenshot(mode,btn){
 
 $("#autoScreenshotBtn").onclick=async()=>submitOrderWithScreenshot("auto",$("#autoScreenshotBtn"));
 $("#manualScreenshotBtn").onclick=async()=>submitOrderWithScreenshot("manual",$("#manualScreenshotBtn"));
+$("#closeSubmittedOrderBtn").onclick=()=>closeManualScreenshot();
 
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape" && document.body.classList.contains("screenshot-mode")){
@@ -4331,6 +4340,10 @@ body.screenshot-mode #cartDialog::backdrop{display:none}
 body.screenshot-mode #cartDialog form{padding:22px}
 .screenshot-title{display:none;text-align:center;margin-bottom:10px;color:#2f2621}
 body.screenshot-mode .screenshot-title{display:block}
+.post-submit-review{display:none}
+body.screenshot-mode .post-submit-review{width:min(760px,100%);margin:12px auto 0;padding:10px 14px;box-sizing:border-box;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;color:#6f625a;font-size:13px;font-weight:800;text-align:center}
+body.screenshot-mode .post-submit-review.show{display:flex}
+.post-submit-review .btn{min-width:88px}
 
 @media(max-width:1200px){.grid{grid-template-columns:repeat(5,minmax(0,1fr)) !important}}
 @media(max-width:1000px){.grid{grid-template-columns:repeat(4,minmax(0,1fr)) !important}}
