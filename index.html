@@ -45,6 +45,27 @@ button{cursor:pointer}
 .eyebrow{font-size:12px;letter-spacing:.25em;color:#aaa}
 .hero h2{font-size:clamp(42px,7vw,78px);line-height:1.02;margin:12px 0 16px;letter-spacing:-.05em}
 .hero p{color:var(--muted);line-height:1.8}
+/* 首頁使用說明 */
+.usage-guide{
+  margin:0 0 26px;
+  padding:20px 22px;
+  background:rgba(255,255,255,.72);
+  border:1px solid var(--line);
+  border-radius:22px;
+  box-shadow:0 10px 28px rgba(70,52,39,.05);
+}
+.usage-guide h3{margin:0 0 12px;font-size:18px}
+.usage-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.usage-step{padding:13px 14px;background:var(--panel2);border-radius:15px;line-height:1.55;font-size:14px}
+.usage-step b{display:block;margin-bottom:3px;color:var(--text)}
+.usage-note{margin:12px 2px 0;color:var(--muted);font-size:13px;line-height:1.65}
+@media(max-width:720px){
+  .usage-guide{padding:16px;margin-bottom:18px;border-radius:18px}
+  .usage-steps{grid-template-columns:1fr 1fr}
+  .usage-step{padding:11px 12px;font-size:13px}
+}
+@media(max-width:430px){.usage-steps{grid-template-columns:1fr}}
+
 .toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
 .search{
   flex:1;min-width:220px;border:1px solid var(--line);background:#fff;color:var(--text);
@@ -1346,7 +1367,7 @@ html.page-visible body{visibility:visible;}
 </style>
 
 <style>
-.admin-tools{display:flex;align-items:center;gap:8px}.orders-dialog{width:min(720px,94vw);max-height:88vh}.orders-dialog form{max-height:82vh;overflow:auto}.orders-help{color:var(--muted);margin-top:0}.orders-list{display:grid;gap:12px}.order-card{border:1px solid var(--line);border-radius:16px;padding:14px;background:rgba(255,255,255,.62)}.order-card-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.order-status{font-size:12px;font-weight:800;padding:5px 9px;border-radius:999px;background:var(--panel2)}.status-pending{color:#8b5f35}.status-done{color:#58735b}.status-cancel{color:#9a6666}.order-sub{margin-top:7px;color:var(--muted);font-size:13px}.order-items{margin-top:10px;line-height:1.7}.order-total{margin-top:8px;font-weight:800}.order-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}#ordersBtn{padding:8px 12px;border-radius:999px}@media(max-width:520px){#ordersBtn{font-size:12px;padding:7px 9px}}
+.admin-tools{display:flex;align-items:center;gap:8px}.orders-dialog{width:min(720px,94vw);max-height:88vh}.orders-dialog form{max-height:82vh;overflow:auto}.orders-help{color:var(--muted);margin-top:0}.orders-list{display:grid;gap:12px}.order-card{border:1px solid var(--line);border-radius:16px;padding:14px;background:rgba(255,255,255,.62)}.order-card-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.order-status{font-size:12px;font-weight:800;padding:5px 9px;border-radius:999px;background:var(--panel2)}.status-pending{color:#8b5f35}.status-done{color:#58735b}.status-cancel{color:#9a6666}.order-sub{margin-top:7px;color:var(--muted);font-size:13px}.order-items{margin-top:10px;line-height:1.7}.order-total{margin-top:8px;font-weight:800}.order-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}#ordersBtn{padding:8px 12px;border-radius:999px;position:relative}.orders-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;margin-left:5px;border-radius:999px;background:#b96f62;color:#fff;font-size:11px;font-weight:900;vertical-align:middle}.orders-badge.hidden{display:none}.order-delete{margin-left:auto}@media(max-width:520px){#ordersBtn{font-size:12px;padding:7px 9px}}
 </style>
 </head>
 <body>
@@ -1363,7 +1384,7 @@ html.page-visible body{visibility:visible;}
   </div>
 </div>
 
-  <div class="admin-tools"><button id="ordersBtn" class="btn hidden" type="button">訂單</button><button id="adminBtn" class="btn" title="管理員登入" aria-label="管理員登入">⚙️</button></div>
+  <div class="admin-tools"><button id="ordersBtn" class="btn hidden" type="button">訂單<span id="ordersBadge" class="orders-badge hidden">0</span></button><button id="adminBtn" class="btn" title="管理員登入" aria-label="管理員登入">⚙️</button></div>
 </header>
 
 <main class="wrap">
@@ -1371,6 +1392,19 @@ html.page-visible body{visibility:visible;}
     <div class="eyebrow">男女皆可交易，糖、T 皆可～</div>
     
     <p>戒指的話，情侶等級由買家出</p>
+  </section>
+
+  <section class="usage-guide" aria-labelledby="usageGuideTitle">
+    <h3 id="usageGuideTitle">使用說明 ♡</h3>
+    <div class="usage-steps">
+      <div class="usage-step"><b>① 選商品</b>選擇想購買的商品。</div>
+      <div class="usage-step"><b>② 加入購物車</b>選好款式與數量後，加入購物車。</div>
+      <div class="usage-step"><b>③ 送出訂單</b>送出後會建立訂單與自動截圖，請將截圖傳給我。</div>
+      <div class="usage-step"><b>④ 選擇男女角</b>選擇要使用男角或女角交易。</div>
+      <div class="usage-step"><b>⑤ 支付方式</b>選擇糖果或轉帳。</div>
+      <div class="usage-step"><b>⑥ 確認並自動截圖</b>確認無誤後送出訂單，系統會自動產生並儲存確認圖片。</div>
+    </div>
+    <p class="usage-note">※ 訂單送出不代表交易已完成；實際交易內容以雙方私訊確認為準。</p>
   </section>
 
   <section class="toolbar">
@@ -2466,7 +2500,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
                 ? (isBuy?"已收齊":"售完")
                 : selectedQty>0
                   ? (isBuy?"更新出售清單":isBuyerOfferProduct(p)?"重新出價":"更新清單")
-                  : (isBuy?"我有這個":isBuyerOfferProduct(p)?"我要出價":"加入清單")
+                  : (isBuy?"我有這個":isBuyerOfferProduct(p)?"我要出價":"加入購物車")
             }</button>
           </div>
           `}
@@ -3757,7 +3791,9 @@ async function checkoutSaleCart(orderInfo){
 
   const now=new Date();
   const pad=n=>String(n).padStart(2,"0");
-  const orderNumber=`${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}${String(now.getMilliseconds()).padStart(3,"0")}`;
+  // 短版訂單編號：月日 + 4 碼，例如 0925-4821。以時間毫秒混合亂數降低撞號機率。
+  const shortCode=String((now.getTime()+Math.floor(Math.random()*10000))%10000).padStart(4,"0");
+  const orderNumber=`${pad(now.getMonth()+1)}${pad(now.getDate())}-${shortCode}`;
   await setDoc(doc(db,"orders",orderNumber),{
     orderNumber,
     status:"待交易",
@@ -3794,18 +3830,34 @@ function renderOrders(){
       <div class="order-sub">${esc(o.createdAtText||"")}　${esc(o.gender||"")}　${esc(o.payment||"")}</div>
       <div class="order-items">${itemText||"—"}</div>
       <div class="order-total">金額：${total}</div>
-      ${pending?`<div class="order-actions"><button class="btn primary" type="button" data-order-done="${esc(o.id)}">完成交易</button><button class="btn" type="button" data-order-cancel="${esc(o.id)}">取消訂單</button></div>`:""}
+      <div class="order-actions">${pending?`<button class="btn primary" type="button" data-order-done="${esc(o.id)}">完成交易</button><button class="btn" type="button" data-order-cancel="${esc(o.id)}">取消訂單</button>`:""}<button class="btn order-delete" type="button" data-order-delete="${esc(o.id)}">刪除訂單</button></div>
     </article>`;
   }).join("");
   box.querySelectorAll("[data-order-done]").forEach(b=>b.onclick=()=>completeOrder(b.dataset.orderDone,b));
   box.querySelectorAll("[data-order-cancel]").forEach(b=>b.onclick=()=>cancelOrder(b.dataset.orderCancel,b));
+  box.querySelectorAll("[data-order-delete]").forEach(b=>b.onclick=()=>deleteOrder(b.dataset.orderDelete,b));
+}
+let ordersListenerReady=false;
+function updateOrdersBadge(){
+  const badge=$("#ordersBadge"); if(!badge)return;
+  const count=adminOrders.filter(o=>o.status==="待交易").length;
+  badge.textContent=String(count);
+  badge.classList.toggle("hidden",count===0);
 }
 function startOrdersListener(){
   if(stopOrdersListener){stopOrdersListener();stopOrdersListener=null;}
-  adminOrders=[];renderOrders();
+  adminOrders=[];ordersListenerReady=false;renderOrders();updateOrdersBadge();
   if(!isAdmin())return;
   stopOrdersListener=onSnapshot(collection(db,"orders"),snap=>{
-    adminOrders=snap.docs.map(d=>({id:d.id,...d.data()}));renderOrders();
+    const previousIds=new Set(adminOrders.map(o=>o.id));
+    const next=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(ordersListenerReady){
+      const fresh=next.filter(o=>o.status==="待交易" && !previousIds.has(o.id));
+      if(fresh.length){
+        toast(fresh.length===1?`有新訂單：${fresh[0].orderNumber||fresh[0].id}`:`有 ${fresh.length} 筆新訂單`);
+      }
+    }
+    adminOrders=next;ordersListenerReady=true;renderOrders();updateOrdersBadge();
   },err=>{console.error(err);toast("訂單讀取失敗");});
 }
 async function completeOrder(orderId,btn){
@@ -3848,6 +3900,15 @@ async function cancelOrder(orderId,btn){
   btn.disabled=true;
   try{await updateDoc(doc(db,"orders",orderId),{status:"已取消",cancelledAt:serverTimestamp()});toast("訂單已取消");}
   catch(e){console.error(e);alert(e?.message||"取消失敗");}
+  finally{btn.disabled=false;}
+}
+async function deleteOrder(orderId,btn){
+  if(!isAdmin()||!orderId)return;
+  const order=adminOrders.find(o=>o.id===orderId);
+  if(!confirm(`確定要永久刪除訂單 ${order?.orderNumber||orderId} 嗎？\n刪除後無法復原。`))return;
+  btn.disabled=true;
+  try{await deleteDoc(doc(db,"orders",orderId));toast("訂單已刪除");}
+  catch(e){console.error(e);alert(e?.message||"刪除訂單失敗");}
   finally{btn.disabled=false;}
 }
 
