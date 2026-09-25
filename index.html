@@ -55,7 +55,7 @@ button{cursor:pointer}
   box-shadow:0 10px 28px rgba(70,52,39,.05);
 }
 .usage-guide h3{margin:0 0 12px;font-size:18px}
-.usage-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.usage-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .usage-step{padding:13px 14px;background:var(--panel2);border-radius:15px;line-height:1.55;font-size:14px}
 .usage-step b{display:block;margin-bottom:3px;color:var(--text)}
 .usage-note{margin:12px 2px 0;color:var(--muted);font-size:13px;line-height:1.65}
@@ -1397,9 +1397,9 @@ html.page-visible body{visibility:visible;}
   <section class="usage-guide" aria-labelledby="usageGuideTitle">
     <h3 id="usageGuideTitle">使用說明 ♡</h3>
     <div class="usage-steps">
-      <div class="usage-step"><b>① 選商品並加入購物車</b></div>
-      <div class="usage-step"><b>② 確認物品並選擇男女角交易與支付方式</b></div>
-      <div class="usage-step"><b>③ 送出訂單會自動截圖，請將截圖私訊給我</b></div>
+      <div class="usage-step"><b>1. 加入購物車</b><span>選款式與數量加入購物車</span></div>
+      <div class="usage-step"><b>2. 確認訂單</b><span>確認商品款式與數量後選擇男或女交易，並選擇支付方式</span></div>
+      <div class="usage-step"><b>3. 完成</b><span>確認無誤後可選自動截圖或自己截圖，再把截圖私訊給我</span></div>
     </div>
     <p class="usage-note">※ 訂單送出不代表交易已完成；實際交易內容以雙方私訊確認為準。</p>
   </section>
@@ -1651,7 +1651,8 @@ html.page-visible body{visibility:visible;}
       </div>
     </div>
     <div class="cart-actions">
-      <button id="screenshotBtn" class="btn primary" type="button">確認無誤・完成下單並儲存圖片</button>
+      <button id="autoScreenshotBtn" class="btn primary" type="button">送出並自動截圖</button>
+      <button id="manualScreenshotBtn" class="btn" type="button">送出自己截圖</button>
       <button id="clearCartBtn" class="btn" type="button">清空清單</button>
     </div>
   </form>
@@ -3909,27 +3910,54 @@ async function deleteOrder(orderId,btn){
   finally{btn.disabled=false;}
 }
 
-$("#screenshotBtn").onclick=async()=>{
+let pendingManualOrderCleanup=false;
+
+function clearSubmittedList(){
+  if(cartViewMode==="buy") offerCart=[]; else cart=[];
+  saveLists();
+  renderCart();render();updateCartFab();
+  if(cartViewMode!=="buy"){
+    document.querySelectorAll('input[name="tradeGender"],input[name="paymentMethod"]').forEach(x=>x.checked=false);
+  }
+}
+
+async function showManualScreenshot(){
+  document.body.classList.add("screenshot-mode");
+  $("#cartDialog").setAttribute("open","");
+  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+  pendingManualOrderCleanup=true;
+}
+
+function closeManualScreenshot(){
+  document.body.classList.remove("screenshot-mode");
+  $("#cartDialog").removeAttribute("open");
+  if(pendingManualOrderCleanup){
+    pendingManualOrderCleanup=false;
+    clearSubmittedList();
+    toast(cartViewMode==="buy"?"確認完成":"下單完成，訂單狀態：待交易");
+  }
+}
+
+async function submitOrderWithScreenshot(mode,btn){
   const list=cartViewMode==="buy" ? offerCart : cart;
   if(!list.length){toast(cartViewMode==="buy"?"出售清單是空的":"購物車是空的");return;}
-  const btn=$("#screenshotBtn");
-  btn.disabled=true;
+  const buttons=[$("#autoScreenshotBtn"),$("#manualScreenshotBtn")].filter(Boolean);
+  buttons.forEach(b=>b.disabled=true);
   const oldText=btn.textContent;
-  btn.textContent=cartViewMode==="buy"?"正在產生確認圖片…":"正在確認庫存…";
+  btn.textContent=cartViewMode==="buy"?"正在建立確認單…":"正在建立訂單…";
   try{
     setOrderDate();
     const orderInfo=cartViewMode==="buy" ? null : prepareOrderMeta();
     renderCart();
     if(cartViewMode!=="buy") await checkoutSaleCart(orderInfo);
     $("#cartDialog").close();
-    await saveOrderImage();
-    if(cartViewMode==="buy") offerCart=[]; else cart=[];
-    saveLists();
-    renderCart();render();updateCartFab();
-    if(cartViewMode!=="buy"){
-      document.querySelectorAll('input[name="tradeGender"],input[name="paymentMethod"]').forEach(x=>x.checked=false);
+    if(mode==="auto"){
+      await saveOrderImage();
+      clearSubmittedList();
+      toast(cartViewMode==="buy"?"確認圖片已產生":"下單完成，訂單狀態：待交易");
+    }else{
+      await showManualScreenshot();
     }
-    toast(cartViewMode==="buy"?"確認圖片已產生":"下單完成，訂單狀態：待交易");
   }catch(err){
     console.error(err);
     document.body.classList.remove("screenshot-mode");
@@ -3937,21 +3965,23 @@ $("#screenshotBtn").onclick=async()=>{
     if(!$("#cartDialog").open) $("#cartDialog").showModal();
     alert(err?.message||"下單失敗，請稍後再試");
   }finally{
-    btn.disabled=false;btn.textContent=oldText;
+    buttons.forEach(b=>b.disabled=false);
+    btn.textContent=oldText;
   }
-};
+}
+
+$("#autoScreenshotBtn").onclick=async()=>submitOrderWithScreenshot("auto",$("#autoScreenshotBtn"));
+$("#manualScreenshotBtn").onclick=async()=>submitOrderWithScreenshot("manual",$("#manualScreenshotBtn"));
 
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape" && document.body.classList.contains("screenshot-mode")){
-    document.body.classList.remove("screenshot-mode");
-    $("#cartDialog").removeAttribute("open");
+    closeManualScreenshot();
   }
 });
 
 document.addEventListener("click",e=>{
   if(document.body.classList.contains("screenshot-mode") && e.target===document.body){
-    document.body.classList.remove("screenshot-mode");
-    $("#cartDialog").removeAttribute("open");
+    closeManualScreenshot();
   }
 });
 
