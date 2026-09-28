@@ -45,37 +45,45 @@ button{cursor:pointer}
 .eyebrow{font-size:12px;letter-spacing:.25em;color:#aaa}
 .hero h2{font-size:clamp(42px,7vw,78px);line-height:1.02;margin:12px 0 16px;letter-spacing:-.05em}
 .hero p{color:var(--muted);line-height:1.8}
-/* 首頁使用說明：奶茶玫瑰色系 */
+/* 首頁使用說明：簡潔流程導覽 */
 .usage-guide{
   margin:0 0 20px;
-  padding:14px 16px;
-  background:linear-gradient(135deg,#ddd3ca 0%,#cfc2b7 100%);
-  border:1px solid #b8a99d;
-  border-radius:22px;
-  box-shadow:0 10px 28px rgba(76,64,56,.12);
+  padding:18px 20px 15px;
+  background:#eee7df;
+  border:1px solid #d5c8bd;
+  border-radius:20px;
+  box-shadow:0 6px 18px rgba(76,64,56,.07);
 }
-.usage-guide h3{margin:0 0 10px;font-size:20px;color:#51463f}
-.usage-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.usage-guide h3{margin:0 0 16px;font-size:19px;color:#51463f}
+.usage-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;position:relative}
+.usage-steps::before{
+  content:"";position:absolute;left:16.66%;right:16.66%;top:22px;height:1px;
+  background:#c7b7aa;z-index:0;
+}
 .usage-step{
-  padding:10px 12px;
-  background:#f4eee8;
-  border:1px solid #c6b8ad;
-  border-radius:15px;
-  line-height:1.45;
-  font-size:15px;
-  color:#62564e;
+  position:relative;z-index:1;text-align:center;padding:0 14px 8px;
+  line-height:1.5;font-size:13px;color:#75685f;background:transparent;border:0;
 }
-.usage-step-icon{width:28px;height:28px;margin-bottom:5px;color:#6f5f55;display:flex;align-items:center;justify-content:center}
-.usage-step-icon svg{width:25px;height:25px;display:block;stroke:currentColor}
-.usage-step b{display:block;margin-bottom:3px;color:#6f5f55;font-size:17px;font-weight:900}
-.usage-trade-note{margin:11px 4px 0;padding:0;color:#62574f;font-size:14px;line-height:1.55;text-align:left;font-weight:700}
-.usage-note{margin:6px 4px 0;color:#786d65;font-size:12.5px;line-height:1.5;text-align:left}
-@media(max-width:720px){
-  .usage-guide{padding:12px;margin-bottom:16px;border-radius:18px}
-  .usage-steps{grid-template-columns:1fr 1fr}
-  .usage-step{padding:10px 11px;font-size:14px}
+.usage-step-icon{
+  width:44px;height:44px;margin:0 auto 8px;border-radius:50%;
+  color:#6f6056;background:#f8f4ef;border:1px solid #cdbdb1;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 7px rgba(76,64,56,.06);
 }
-@media(max-width:430px){.usage-steps{grid-template-columns:1fr}}
+.usage-step-icon svg{width:21px;height:21px;display:block;stroke:currentColor}
+.usage-step b{display:block;margin-bottom:2px;color:#5c4f47;font-size:15px;font-weight:900}
+.usage-trade-note{margin:10px 2px 0;padding-top:10px;border-top:1px solid #d5c8bd;color:#62574f;font-size:13px;line-height:1.55;text-align:left;font-weight:700}
+.usage-note{margin:5px 2px 0;color:#81756c;font-size:12px;line-height:1.5;text-align:left}
+@media(max-width:620px){
+  .usage-guide{padding:16px 16px 14px;border-radius:18px}
+  .usage-guide h3{margin-bottom:13px}
+  .usage-steps{grid-template-columns:1fr;gap:0}
+  .usage-steps::before{left:21px;right:auto;top:22px;bottom:22px;width:1px;height:auto}
+  .usage-step{text-align:left;min-height:64px;padding:0 0 12px 58px;display:flex;flex-direction:column;justify-content:center}
+  .usage-step-icon{position:absolute;left:0;top:0;margin:0;width:43px;height:43px}
+  .usage-step b{font-size:15px}
+  .usage-trade-note{margin-top:4px}
+}
 
 .toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
 .search{
@@ -1405,7 +1413,7 @@ html.page-visible body{visibility:visible;}
   </div>
 </div>
 
-  <div class="admin-tools"><button id="ordersBtn" class="btn hidden" type="button">訂單<span id="ordersBadge" class="orders-badge hidden">0</span></button><button id="adminBtn" class="btn" title="管理員登入" aria-label="管理員登入">⚙️</button></div>
+  <div class="admin-tools"><button id="backupBtn" class="btn hidden" type="button">完整備份</button><button id="restoreBtn" class="btn hidden" type="button">還原備份</button><input id="restoreFileInput" type="file" accept=".zip,application/zip" class="hidden"><button id="ordersBtn" class="btn hidden" type="button">訂單<span id="ordersBadge" class="orders-badge hidden">0</span></button><button id="adminBtn" class="btn" title="管理員登入" aria-label="管理員登入">⚙️</button></div>
 </header>
 
 <main class="wrap">
@@ -1414,7 +1422,7 @@ html.page-visible body{visibility:visible;}
   </section>
 
   <section class="usage-guide" aria-labelledby="usageGuideTitle">
-    <h3 id="usageGuideTitle">使用說明 ♡</h3>
+    <h3 id="usageGuideTitle">使用說明</h3>
     <div class="usage-steps">
       <div class="usage-step">
         <div class="usage-step-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1"/><circle cx="19" cy="20" r="1"/><path d="M3 4h2l2.4 10.2a2 2 0 0 0 2 1.5h7.8a2 2 0 0 0 2-1.6L21 7H6"/></svg></div>
@@ -1704,6 +1712,7 @@ html.page-visible body{visibility:visible;}
 <div id="toast" class="toast">已儲存</div>
 
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
@@ -1711,7 +1720,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import {
   getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, setDoc,
-  onSnapshot, serverTimestamp, runTransaction, getDoc
+  onSnapshot, serverTimestamp, runTransaction, getDoc, getDocs, writeBatch, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -3567,6 +3576,8 @@ $("#adminBtn").onclick=async()=>{
 onAuthStateChanged(auth,user=>{
   currentUser = user && user.uid===ADMIN_UID ? user : null;
   $("#ordersBtn")?.classList.toggle("hidden",!isAdmin());
+  $("#backupBtn")?.classList.toggle("hidden",!isAdmin());
+  $("#restoreBtn")?.classList.toggle("hidden",!isAdmin());
   startOrdersListener();
   render();
 });
@@ -4028,6 +4039,236 @@ document.addEventListener("click",e=>{
   }
 });
 
+
+// ===== 完整備份 / 還原備份 =====
+// 目前賣場的圖片實際以 data URL 存在 Firestore 商品文件中；展示影片則是 GitHub Pages/外部網址路徑。
+// 備份採 ZIP：manifest.json + media/images + media/videos，避免把大型媒體全部硬塞進單一 JSON。
+const BACKUP_FORMAT="nene-sell-full-backup";
+const BACKUP_VERSION=1;
+const BACKUP_COLLECTIONS=["products","orders"];
+
+function backupSafeName(s="file"){
+  return String(s||"file").replace(/[\\/:*?"<>|\x00-\x1f]/g,"_").slice(0,100)||"file";
+}
+function extFromMime(mime=""){
+  const m=String(mime).toLowerCase();
+  if(m.includes("png"))return "png";
+  if(m.includes("webp"))return "webp";
+  if(m.includes("gif"))return "gif";
+  if(m.includes("svg"))return "svg";
+  if(m.includes("jpeg")||m.includes("jpg"))return "jpg";
+  if(m.includes("webm"))return "webm";
+  if(m.includes("quicktime"))return "mov";
+  return "bin";
+}
+function dataUrlToBlob(dataUrl){
+  const m=String(dataUrl).match(/^data:([^;,]+)?(;base64)?,(.*)$/s);
+  if(!m)throw new Error("無法解析圖片資料");
+  const mime=m[1]||"application/octet-stream", raw=m[3]||"";
+  if(m[2]){
+    const bin=atob(raw), bytes=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+    return new Blob([bytes],{type:mime});
+  }
+  return new Blob([decodeURIComponent(raw)],{type:mime});
+}
+function blobToDataUrl(blob){
+  return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(blob);});
+}
+function serializeFirestoreValue(v){
+  if(v instanceof Timestamp)return {__neneType:"timestamp",seconds:v.seconds,nanoseconds:v.nanoseconds};
+  if(v instanceof Date)return {__neneType:"date",iso:v.toISOString()};
+  if(Array.isArray(v))return v.map(serializeFirestoreValue);
+  if(v && typeof v==="object"){
+    const out={}; for(const [k,x] of Object.entries(v))out[k]=serializeFirestoreValue(x); return out;
+  }
+  return v;
+}
+function deserializeFirestoreValue(v){
+  if(Array.isArray(v))return v.map(deserializeFirestoreValue);
+  if(v && typeof v==="object"){
+    if(v.__neneType==="timestamp")return new Timestamp(Number(v.seconds)||0,Number(v.nanoseconds)||0);
+    if(v.__neneType==="date")return new Date(v.iso);
+    const out={}; for(const [k,x] of Object.entries(v))out[k]=deserializeFirestoreValue(x); return out;
+  }
+  return v;
+}
+async function sha256Hex(blob){
+  const buf=await blob.arrayBuffer();
+  const hash=await crypto.subtle.digest("SHA-256",buf);
+  return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+async function collectAllStoreDocs(){
+  const result={};
+  for(const name of BACKUP_COLLECTIONS){
+    const snap=await getDocs(collection(db,name));
+    result[name]=snap.docs.map(d=>({id:d.id,data:serializeFirestoreValue(d.data())}));
+  }
+  return result;
+}
+async function externalizeDataUrls(value,zip,assets,pathParts=[]){
+  if(typeof value==="string" && value.startsWith("data:")){
+    const blob=dataUrlToBlob(value), hash=await sha256Hex(blob), ext=extFromMime(blob.type);
+    const assetPath=`media/images/${hash}.${ext}`;
+    if(!zip.file(assetPath))zip.file(assetPath,blob);
+    assets.push({kind:"image",path:assetPath,mime:blob.type,size:blob.size,sha256:hash,sourceField:pathParts.join(".")});
+    return {__neneMediaRef:assetPath,mime:blob.type};
+  }
+  if(Array.isArray(value)){
+    const out=[]; for(let i=0;i<value.length;i++)out.push(await externalizeDataUrls(value[i],zip,assets,[...pathParts,String(i)])); return out;
+  }
+  if(value && typeof value==="object" && !value.__neneType){
+    const out={}; for(const [k,v] of Object.entries(value))out[k]=await externalizeDataUrls(v,zip,assets,[...pathParts,k]); return out;
+  }
+  return value;
+}
+async function internalizeMediaRefs(value,zip){
+  if(Array.isArray(value)){const out=[];for(const v of value)out.push(await internalizeMediaRefs(v,zip));return out;}
+  if(value && typeof value==="object"){
+    if(value.__neneMediaRef){
+      const f=zip.file(value.__neneMediaRef); if(!f)throw new Error(`備份缺少媒體檔：${value.__neneMediaRef}`);
+      return await blobToDataUrl(await f.async("blob"));
+    }
+    const out={};for(const [k,v] of Object.entries(value))out[k]=await internalizeMediaRefs(v,zip);return out;
+  }
+  return value;
+}
+function looksLikeVideoPath(s){
+  return typeof s==="string" && /\.(mp4|webm|mov|m4v)(?:[?#].*)?$/i.test(s.trim());
+}
+async function addVideoFilesFromDocs(store,zip,assets){
+  const seen=new Set();
+  async function walk(v,fieldPath=[]){
+    if(typeof v==="string" && looksLikeVideoPath(v) && !seen.has(v)){
+      seen.add(v);
+      const url=/^https?:\/\//i.test(v)?v:new URL(v,location.href).href;
+      try{
+        const res=await fetch(url,{cache:"no-store"});
+        if(!res.ok)throw new Error(`HTTP ${res.status}`);
+        const blob=await res.blob(), hash=await sha256Hex(blob);
+        let ext=(v.match(/\.([a-z0-9]+)(?:[?#].*)?$/i)||[])[1]||extFromMime(blob.type); ext=ext.toLowerCase();
+        const assetPath=`media/videos/${hash}.${ext}`;
+        if(!zip.file(assetPath))zip.file(assetPath,blob);
+        assets.push({kind:"video",path:assetPath,mime:blob.type||"video/"+ext,size:blob.size,sha256:hash,originalReference:v,resolvedUrl:url,sourceField:fieldPath.join(".")});
+      }catch(err){
+        assets.push({kind:"video",originalReference:v,resolvedUrl:url,sourceField:fieldPath.join("."),backupError:String(err?.message||err)});
+      }
+      return;
+    }
+    if(Array.isArray(v)){for(let i=0;i<v.length;i++)await walk(v[i],[...fieldPath,String(i)]);}
+    else if(v&&typeof v==="object"){for(const [k,x] of Object.entries(v))await walk(x,[...fieldPath,k]);}
+  }
+  await walk(store,[]);
+}
+async function createFullBackup(){
+  if(!isAdmin())return;
+  const btn=$("#backupBtn"); const old=btn.textContent; btn.disabled=true;btn.textContent="備份中…";
+  try{
+    if(typeof JSZip!=="function")throw new Error("備份工具尚未載入，請重新整理後再試");
+    const raw=await collectAllStoreDocs();
+    const zip=new JSZip(), assets=[];
+    const portable={};
+    for(const [collectionName,docs] of Object.entries(raw)){
+      portable[collectionName]=[];
+      for(const row of docs){
+        portable[collectionName].push({id:row.id,data:await externalizeDataUrls(row.data,zip,assets,[collectionName,row.id])});
+      }
+    }
+    await addVideoFilesFromDocs(raw,zip,assets);
+    const now=new Date();
+    const manifest={
+      format:BACKUP_FORMAT,version:BACKUP_VERSION,createdAt:now.toISOString(),
+      source:{projectId:firebaseConfig.projectId,authDomain:firebaseConfig.authDomain,storageBucket:firebaseConfig.storageBucket,siteOrigin:location.origin,siteUrl:location.href},
+      architecture:{firestoreCollections:BACKUP_COLLECTIONS,imageStorage:"Firestore document data URLs (exported as media/images files in this ZIP)",videoStorage:"GitHub Pages / external URL paths referenced by Firestore demoVideoPath; reachable video bytes are copied into media/videos",firebaseStorageUsedByCurrentCode:false},
+      restoreNotes:["Firestore products/orders are restored with their original document IDs and fields.","Image files are re-embedded into their original Firestore fields on restore.","Video references are restored to their original paths/URLs. The packaged media/videos files must also be uploaded to the new website/storage when moving away from the old host."],
+      assets,collections:portable
+    };
+    zip.file("manifest.json",JSON.stringify(manifest,null,2));
+    zip.file("README.txt","內內販售賣場完整備份\n\n此 ZIP 內含 manifest.json、商品/訂單完整 Firestore 資料、圖片檔，以及備份時可取得的展示影片檔。\n搬到新網站時，請把 media/videos 內影片上傳到新網站並維持/更新 manifest 中記錄的原始路徑。\n");
+    const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+    a.download=`nene-sell-full-backup-${now.toISOString().slice(0,19).replace(/[T:]/g,"-")}.zip`;
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+    const failedVideos=assets.filter(x=>x.kind==="video"&&x.backupError);
+    if(failedVideos.length)alert(`備份已完成，但有 ${failedVideos.length} 個影片因瀏覽器跨網域/檔案不存在而無法把影片本體抓進 ZIP。\n影片路徑與錯誤資訊已保留在 manifest.json，請另外保留這些影片檔。`);
+    toast("完整備份已下載");
+  }catch(e){console.error(e);alert(e?.message||"完整備份失敗");}
+  finally{btn.disabled=false;btn.textContent=old;}
+}
+async function validateBackupZip(file){
+  if(typeof JSZip!=="function")throw new Error("備份工具尚未載入");
+  const zip=await JSZip.loadAsync(file);
+  const mf=zip.file("manifest.json");if(!mf)throw new Error("這不是完整備份：缺少 manifest.json");
+  const manifest=JSON.parse(await mf.async("string"));
+  if(manifest.format!==BACKUP_FORMAT)throw new Error("備份格式不正確");
+  if(Number(manifest.version)>BACKUP_VERSION)throw new Error("此備份版本較新，請使用新版網站還原");
+  if(!manifest.collections||!Array.isArray(manifest.collections.products)||!Array.isArray(manifest.collections.orders))throw new Error("備份資料不完整");
+  // 在修改 Firebase 前，先驗證所有圖片媒體都真的存在於 ZIP。
+  const refs=[];
+  (function walk(v){if(Array.isArray(v))v.forEach(walk);else if(v&&typeof v==="object"){if(v.__neneMediaRef)refs.push(v.__neneMediaRef);else Object.values(v).forEach(walk);}})(manifest.collections);
+  for(const ref of new Set(refs))if(!zip.file(ref))throw new Error(`備份缺少媒體檔：${ref}`);
+  return {zip,manifest};
+}
+async function buildRestoreDocs(zip,manifest){
+  const out={};
+  for(const name of BACKUP_COLLECTIONS){
+    out[name]=[];
+    for(const row of manifest.collections[name]||[]){
+      const withMedia=await internalizeMediaRefs(row.data,zip);
+      out[name].push({id:String(row.id),data:deserializeFirestoreValue(withMedia)});
+    }
+  }
+  return out;
+}
+async function replaceFirestoreWithDocs(target){
+  // 分批 350 筆，低於 Firestore 每批 500 writes 限制。
+  const current={};
+  for(const name of BACKUP_COLLECTIONS){const snap=await getDocs(collection(db,name));current[name]=snap.docs.map(d=>d.id);}
+  const ops=[];
+  for(const name of BACKUP_COLLECTIONS){
+    for(const id of current[name])ops.push({type:"delete",name,id});
+    for(const row of target[name]||[])ops.push({type:"set",name,id:row.id,data:row.data});
+  }
+  for(let i=0;i<ops.length;i+=350){
+    const batch=writeBatch(db);
+    for(const op of ops.slice(i,i+350)){
+      const ref=doc(db,op.name,op.id); if(op.type==="delete")batch.delete(ref);else batch.set(ref,op.data);
+    }
+    await batch.commit();
+  }
+}
+async function restoreFullBackup(file){
+  if(!isAdmin()||!file)return;
+  const btn=$("#restoreBtn"),old=btn.textContent;btn.disabled=true;btn.textContent="檢查備份…";
+  try{
+    const {zip,manifest}=await validateBackupZip(file);
+    const target=await buildRestoreDocs(zip,manifest); // 所有檔案先完整讀好，尚未動 Firebase
+    const first=confirm(`即將使用 ${manifest.createdAt?new Date(manifest.createdAt).toLocaleString():"此備份"} 的完整備份覆蓋目前賣場資料。\n\n商品：${target.products.length} 筆\n訂單：${target.orders.length} 筆\n\n繼續嗎？`);
+    if(!first){toast("已取消還原，資料未修改");return;}
+    const second=confirm("最後確認：這個動作會刪除／覆蓋 Firebase 目前的商品與訂單資料，再還原成備份內容。\n\n按『取消』不會修改任何資料。確定開始嗎？");
+    if(!second){toast("已取消還原，資料未修改");return;}
+    btn.textContent="還原中…";
+    // 寫入前再抓一份記憶體回復點；若中途失敗，盡力自動回滾。
+    const rollback=await collectAllStoreDocs();
+    const rollbackDecoded={};
+    for(const name of BACKUP_COLLECTIONS)rollbackDecoded[name]=(rollback[name]||[]).map(r=>({id:r.id,data:deserializeFirestoreValue(r.data)}));
+    try{
+      await replaceFirestoreWithDocs(target);
+    }catch(err){
+      console.error("restore failed, rolling back",err);
+      try{await replaceFirestoreWithDocs(rollbackDecoded);}catch(rb){console.error("rollback failed",rb);throw new Error(`還原失敗，而且自動回滾也失敗：${rb?.message||rb}`);}
+      throw new Error(`還原失敗，已自動恢復還原前資料：${err?.message||err}`);
+    }
+    const videoCount=(manifest.assets||[]).filter(x=>x.kind==="video"&&!x.backupError).length;
+    alert(`完整還原完成。\n商品：${target.products.length} 筆\n訂單：${target.orders.length} 筆\n${videoCount?`\n備份 ZIP 內另有 ${videoCount} 個影片檔；若是搬到新網站，仍需把 media/videos 裡的影片上傳到新網站對應路徑。`:""}`);
+    toast("完整還原完成");
+  }catch(e){console.error(e);alert(e?.message||"還原備份失敗");}
+  finally{btn.disabled=false;btn.textContent=old;$("#restoreFileInput").value="";}
+}
+$("#backupBtn")?.addEventListener("click",createFullBackup);
+$("#restoreBtn")?.addEventListener("click",()=>$("#restoreFileInput")?.click());
+$("#restoreFileInput")?.addEventListener("change",e=>{const f=e.target.files?.[0];if(f)restoreFullBackup(f);});
+
 onSnapshot(
   collection(db,"products"),
   snap=>{
@@ -4099,6 +4340,9 @@ setTimeout(()=>document.querySelector(".tabs")?.classList.remove("category-setti
 <style>
 .checkout-info{margin-top:14px;display:grid;gap:10px}.checkout-field{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;border:1px solid #d7c7b8;border-radius:12px;background:#fffaf6}.checkout-label{font-weight:900;color:#4d392f}.checkout-options{display:flex;gap:14px;flex-wrap:wrap}.checkout-options label{display:flex;align-items:center;gap:5px;font-weight:800;color:#5e493d;cursor:pointer}.order-meta{margin-top:2px;padding:13px 15px;border:1px solid #bda38e;border-radius:12px;background:#eadbcf;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;color:#49372d;font-size:13px}.order-meta b{font-weight:900}.screenshot-mode .checkout-field{display:none!important}.screenshot-mode .order-meta{display:grid!important;background:#eadbcf!important}.screenshot-mode #checkoutInfo{margin-top:10px}@media(max-width:560px){.checkout-field{align-items:flex-start;flex-direction:column}.order-meta{grid-template-columns:1fr}}
 </style>
+
+
+
 
 </body>
 </html>
