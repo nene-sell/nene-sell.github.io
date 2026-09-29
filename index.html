@@ -3044,16 +3044,38 @@ async function generateProductCatalogImage(selectedFile=null){
       }
     ];
 
+    function expandCatalogItems(items, group){
+      const expanded=[];
+      for(const p of items){
+        // 交換區本身是一組「我提供 ⇄ 想換」，維持原本一商品一卡。
+        if(group.mode==="exchange"){
+          expanded.push(p);
+          continue;
+        }
+        const variants=getVariants(p);
+        if(variants.length){
+          // 總覽圖改成「一個款式一張卡」；售完款式不輸出。
+          for(const v of variants){
+            if(v.stock<=0)continue;
+            expanded.push({...p,_catalogVariant:{...v}});
+          }
+        }else{
+          expanded.push(p);
+        }
+      }
+      return expanded;
+    }
+
     let available=categoryGroups.map(group=>({
       ...group,
-      sections:group.sections.map(sec=>({
-        ...sec,
-        items:catalogProducts.filter(sec.match).sort((a,b)=>
+      sections:group.sections.map(sec=>{
+        const baseItems=catalogProducts.filter(sec.match).sort((a,b)=>
           group.mode==="recent"
             ? ((b?.createdAt?.seconds||0)-(a?.createdAt?.seconds||0))
             : orderValue(a)-orderValue(b)
-        )
-      })).filter(sec=>sec.items.length)
+        );
+        return {...sec,items:expandCatalogItems(baseItems,group)};
+      }).filter(sec=>sec.items.length)
     })).filter(group=>group.sections.length);
 
     if(selectedFile){
@@ -3089,8 +3111,8 @@ async function generateProductCatalogImage(selectedFile=null){
           let rowH=baseCardH;
           ctxMeasure.font='600 12px Arial,"Microsoft JhengHei",sans-serif';
           for(const item of rowItems){
-            const lines=catalogWrapVariantLines(ctxMeasure,catalogVariantRows(item),cardW-12);
-            rowH=Math.max(rowH,baseCardH+lines.length*variantLineH);
+            const lines=item._catalogVariant ? [] : catalogWrapVariantLines(ctxMeasure,catalogVariantRows(item),cardW-12);
+            rowH=Math.max(rowH,baseCardH+(item._catalogVariant?12:0)+lines.length*variantLineH);
           }
           sectionCardsH+=rowH+(r?gap:0);
         }
@@ -3161,10 +3183,11 @@ async function generateProductCatalogImage(selectedFile=null){
           const rowItems=sec.items.slice(r*cols,(r+1)*cols);
           ctx.font='600 12px Arial,"Microsoft JhengHei",sans-serif';
           const variantLinesByItem=rowItems.map(p=>
-            catalogWrapVariantLines(ctx,catalogVariantRows(p),cardW-12)
+            p._catalogVariant ? [] : catalogWrapVariantLines(ctx,catalogVariantRows(p),cardW-12)
           );
           const maxVariantLines=Math.max(0,...variantLinesByItem.map(v=>v.length));
-          const rowH=baseCardH+maxVariantLines*variantLineH;
+          const hasSplitVariant=rowItems.some(p=>!!p._catalogVariant);
+          const rowH=baseCardH+(hasSplitVariant?12:0)+maxVariantLines*variantLineH;
 
           for(let col=0;col<rowItems.length;col++){
             const p=rowItems[col];
@@ -3223,7 +3246,8 @@ async function generateProductCatalogImage(selectedFile=null){
                 ctx.textAlign="center";
                 ctx.fillText("⇄",x+cardW/2,cy+imageH/2+6);
               }else{
-                const img=await loadCatalogImage(p.imageData);
+                const catalogImageSrc=p._catalogVariant?.imageData || p.imageData;
+                const img=await loadCatalogImage(catalogImageSrc);
                 const scale=Math.min(cardW/img.width,imageH/img.height);
                 const dw=img.width*scale;
                 const dh=img.height*scale;
@@ -3240,7 +3264,7 @@ async function generateProductCatalogImage(selectedFile=null){
             ctx.fillStyle="#493a32";
             ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
 
-            const catalogStock=getStock(p);
+            const catalogStock=p._catalogVariant ? p._catalogVariant.stock : getStock(p);
             if(group.mode==="exchange"){
               const offers=normalizeExchangeOffers(p).filter(o=>o && (o.name||o.imageData));
               const offerNames=offers.map(o=>o.name).filter(Boolean).join("＋");
@@ -3252,15 +3276,25 @@ async function generateProductCatalogImage(selectedFile=null){
               ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
               ctx.fillText(`可交換 ×${catalogStock}`,x+cardW/2,cy+imageH+44);
             }else{
-              ctx.fillText(catalogFitText(ctx,p.name,cardW-10),x+cardW/2,cy+imageH+20);
+              ctx.fillText(catalogFitText(ctx,p.name,cardW-10),x+cardW/2,cy+imageH+18);
+
+              const hasCatalogVariant=!!p._catalogVariant;
+              if(hasCatalogVariant){
+                ctx.fillStyle="#75665e";
+                ctx.font='700 14px Arial,"Microsoft JhengHei",sans-serif';
+                ctx.fillText(catalogFitText(ctx,p._catalogVariant.name,cardW-12),x+cardW/2,cy+imageH+37);
+              }
 
               const priceText=group.mode==="freeOffer" ? "自由出價" : productPriceLabel(p);
               const stockText=group.mode==="buy"
-                ? `需求 ${p.purchaseQtyText||("×"+catalogStock)}`
+                ? `需求 ×${catalogStock}`
                 : `×${catalogStock}`;
+              const priceY=cy+imageH+(hasCatalogVariant?56:44);
 
               ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
-              const priceW=ctx.measureText(priceText).width;
+              const pricePrefix=group.mode==="buy" ? "收購價 " : "";
+              const priceFull=pricePrefix+priceText;
+              const priceW=ctx.measureText(priceFull).width;
               ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
               const stockW=ctx.measureText(stockText).width;
               const spacing=8;
@@ -3270,12 +3304,12 @@ async function generateProductCatalogImage(selectedFile=null){
               ctx.textAlign="left";
               ctx.fillStyle="#b66f59";
               ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
-              ctx.fillText(group.mode==="buy" ? `收購價 ${priceText}` : priceText,tx,cy+imageH+44);
-              tx+=priceW+spacing+(group.mode==="buy" ? ctx.measureText("收購價 ").width : 0);
+              ctx.fillText(priceFull,tx,priceY);
+              tx+=priceW+spacing;
 
               ctx.fillStyle="#75665e";
               ctx.font='700 16px Arial,"Microsoft JhengHei",sans-serif';
-              ctx.fillText(stockText,tx,cy+imageH+44);
+              ctx.fillText(stockText,tx,priceY);
             }
 
             if(group.mode!=="exchange" && variantLines.length){
