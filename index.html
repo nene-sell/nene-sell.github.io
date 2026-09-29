@@ -1461,6 +1461,22 @@ html.page-visible body{visibility:visible;}
 }
 </style>
 
+
+<style id="checkout-unified-box-v3">
+#cartDialog .checkout-info{display:block;margin-top:14px}
+#cartDialog .checkout-details-box{border:1px solid #d8c9bc;border-radius:16px;background:#fffaf6;padding:4px 15px;box-shadow:0 5px 18px rgba(88,65,50,.045)}
+#cartDialog .checkout-details-box .checkout-field{margin:0;padding:13px 0;border:0;border-bottom:1px solid #eadfd6;border-radius:0;background:transparent;box-shadow:none}
+#cartDialog .checkout-details-box .checkout-field:last-child{border-bottom:0}
+#cartDialog .checkout-details-box .checkout-text-field{grid-template-columns:105px minmax(0,1fr)}
+#cartDialog .checkout-details-box .checkout-text-input{width:100%;max-width:none;background:#fff;border-color:#ddd0c5}
+#cartDialog .checkout-details-box .checkout-note-input{min-height:66px}
+.screenshot-mode #cartDialog .checkout-details-box{display:none!important}
+@media(max-width:560px){
+  #cartDialog .checkout-details-box{padding:3px 13px;border-radius:14px}
+  #cartDialog .checkout-details-box .checkout-field{padding:12px 0}
+  #cartDialog .checkout-details-box .checkout-text-field{display:grid;grid-template-columns:1fr;gap:7px}
+}
+</style>
 </head>
 <body>
 <header class="topbar">
@@ -1729,27 +1745,29 @@ html.page-visible body{visibility:visible;}
     <div id="cartEmpty" class="cart-empty">目前還沒有加入商品。</div>
     <div id="cartSummary" class="cart-summary hidden"></div>
     <div id="checkoutInfo" class="checkout-info">
-      <div class="checkout-field">
-        <span class="checkout-label">交易角色</span>
-        <div class="checkout-options">
-          <label><input type="radio" name="tradeGender" value="男角"> 男角</label>
-          <label><input type="radio" name="tradeGender" value="女角"> 女角</label>
+      <div class="checkout-details-box">
+        <div class="checkout-field">
+          <span class="checkout-label">交易角色</span>
+          <div class="checkout-options">
+            <label><input type="radio" name="tradeGender" value="男角"> 男角</label>
+            <label><input type="radio" name="tradeGender" value="女角"> 女角</label>
+          </div>
         </div>
-      </div>
-      <div class="checkout-field">
-        <span class="checkout-label">付款方式</span>
-        <div class="checkout-options">
-          <label><input type="radio" name="paymentMethod" value="糖果"> 糖果</label>
-          <label><input type="radio" name="paymentMethod" value="轉帳"> 轉帳</label>
+        <div class="checkout-field checkout-text-field">
+          <label class="checkout-label" for="tradeIdInput">交易 ID <small>選填</small></label>
+          <input id="tradeIdInput" class="checkout-text-input" type="text" maxlength="80" autocomplete="off" placeholder="">
         </div>
-      </div>
-      <div class="checkout-field checkout-text-field">
-        <label class="checkout-label" for="tradeIdInput">交易 ID <small>選填</small></label>
-        <input id="tradeIdInput" class="checkout-text-input" type="text" maxlength="80" autocomplete="off" placeholder="">
-      </div>
-      <div class="checkout-field checkout-text-field">
-        <label class="checkout-label" for="orderNoteInput">留言 <small>選填</small></label>
-        <textarea id="orderNoteInput" class="checkout-text-input checkout-note-input" maxlength="300" rows="2" placeholder="可以留下希望交易的時間"></textarea>
+        <div class="checkout-field">
+          <span class="checkout-label">支付方式</span>
+          <div class="checkout-options">
+            <label><input type="radio" name="paymentMethod" value="糖果"> 糖果</label>
+            <label><input type="radio" name="paymentMethod" value="轉帳"> 轉帳</label>
+          </div>
+        </div>
+        <div class="checkout-field checkout-text-field checkout-note-field">
+          <label class="checkout-label" for="orderNoteInput">留言 <small>選填</small></label>
+          <textarea id="orderNoteInput" class="checkout-text-input checkout-note-input" maxlength="300" rows="2" placeholder="可以留下希望的交易時間"></textarea>
+        </div>
       </div>
       <div id="orderMeta" class="order-meta hidden">
         <span>訂單編號：<b id="orderNumber">—</b></span>
