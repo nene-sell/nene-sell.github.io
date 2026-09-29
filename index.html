@@ -1398,6 +1398,69 @@ html.page-visible body{visibility:visible;}
 .order-item-info b{overflow-wrap:anywhere}
 .order-item-info span{font-size:12px;color:var(--muted)}
 </style>
+
+<style id="checkout-orders-polish-v2">
+/* 購物車結帳／訂單管理：局部視覺整理，不影響其他區塊 */
+#cartDialog #checkoutInfo{
+  margin-top:16px;gap:11px;padding:14px;border:1px solid #e1d5ca;border-radius:18px;
+  background:linear-gradient(180deg,#fbf8f4 0%,#f6efe9 100%);
+}
+#cartDialog .checkout-field{
+  padding:12px 14px;border:1px solid #e3d8ce;border-radius:14px;background:rgba(255,255,255,.86);
+  box-shadow:0 2px 8px rgba(74,55,42,.035);
+}
+#cartDialog .checkout-label{font-size:13px;letter-spacing:.02em;color:#59483e}
+#cartDialog .checkout-label small{font-size:10px;padding:2px 6px;margin-left:6px;border-radius:999px;background:#f0e8e1;color:#8d7b6f}
+#cartDialog .checkout-options{gap:8px}
+#cartDialog .checkout-options label{
+  min-width:74px;justify-content:center;padding:8px 12px;border:1px solid #dfd2c7;border-radius:999px;
+  background:#fff;color:#5b493e;transition:.15s ease;
+}
+#cartDialog .checkout-options label:has(input:checked){background:#e8d8cb;border-color:#cdb29d;color:#44342b;box-shadow:inset 0 0 0 1px rgba(166,132,106,.08)}
+#cartDialog .checkout-options input{accent-color:#a98367}
+#cartDialog .checkout-text-field{display:grid;grid-template-columns:105px minmax(0,1fr);align-items:start}
+#cartDialog .checkout-text-input{
+  width:100%;max-width:none;border-color:#dfd3c8;border-radius:12px;background:#fffdfb;padding:10px 12px;
+}
+#cartDialog .checkout-text-input:focus{border-color:#bfa38d;box-shadow:0 0 0 3px rgba(191,163,141,.12)}
+#cartDialog .checkout-note-input{min-height:70px}
+#cartDialog .cart-actions{gap:9px}
+#cartDialog .cart-actions .btn{border-radius:12px}
+#cartDialog .order-meta{border-color:#d6c2b1;background:#f0e4da;border-radius:14px;padding:14px 16px}
+
+#ordersDialog{width:min(760px,94vw)}
+#ordersDialog form{padding:20px}
+#ordersDialog h3{margin-bottom:5px}
+#ordersDialog .orders-help{font-size:13px;line-height:1.55;margin-bottom:15px}
+#ordersDialog .orders-list{gap:14px}
+#ordersDialog .order-card{
+  padding:16px;border-color:#e0d4ca;border-radius:18px;background:#fffdfa;
+  box-shadow:0 5px 18px rgba(68,50,38,.055);
+}
+#ordersDialog .order-card-head{padding-bottom:10px;border-bottom:1px solid #eee5de}
+#ordersDialog .order-status{padding:5px 10px}
+#ordersDialog .order-sub{margin-top:10px}
+#ordersDialog .order-extra{background:#f7f1ec;border:1px solid #ebe0d7;border-radius:11px}
+#ordersDialog .order-total{padding:10px 12px;border-radius:11px;background:#f5eee8;color:#4d3c32}
+#ordersDialog .order-admin-edit{margin-top:12px;padding:12px;border-color:#e2d6cc;border-radius:14px;background:#faf6f2}
+#ordersDialog .order-admin-row{grid-template-columns:110px minmax(0,1fr);gap:10px}
+#ordersDialog .order-admin-input{border-color:#ded1c6;border-radius:11px;background:#fffdfb;padding:9px 11px}
+#ordersDialog .order-admin-input:focus{outline:none;border-color:#bfa38d;box-shadow:0 0 0 3px rgba(191,163,141,.11)}
+#ordersDialog .order-admin-save{border-radius:10px}
+#ordersDialog .order-actions{padding-top:2px}
+#ordersDialog .order-actions .btn{border-radius:10px}
+@media(max-width:560px){
+  #cartDialog #checkoutInfo{padding:10px;border-radius:15px}
+  #cartDialog .checkout-field{padding:11px 12px}
+  #cartDialog .checkout-text-field{grid-template-columns:1fr;gap:7px}
+  #cartDialog .checkout-options{width:100%}
+  #cartDialog .checkout-options label{flex:1;min-width:0}
+  #ordersDialog form{padding:16px}
+  #ordersDialog .order-card{padding:13px}
+  #ordersDialog .order-admin-row{grid-template-columns:1fr;gap:6px}
+}
+</style>
+
 </head>
 <body>
 <header class="topbar">
@@ -1682,11 +1745,11 @@ html.page-visible body{visibility:visible;}
       </div>
       <div class="checkout-field checkout-text-field">
         <label class="checkout-label" for="tradeIdInput">交易 ID <small>選填</small></label>
-        <input id="tradeIdInput" class="checkout-text-input" type="text" maxlength="80" autocomplete="off" placeholder="可填遊戲 ID／交易 ID">
+        <input id="tradeIdInput" class="checkout-text-input" type="text" maxlength="80" autocomplete="off" placeholder="">
       </div>
       <div class="checkout-field checkout-text-field">
         <label class="checkout-label" for="orderNoteInput">留言 <small>選填</small></label>
-        <textarea id="orderNoteInput" class="checkout-text-input checkout-note-input" maxlength="300" rows="2" placeholder="可以寫希望交易的時間"></textarea>
+        <textarea id="orderNoteInput" class="checkout-text-input checkout-note-input" maxlength="300" rows="2" placeholder="可以留下希望交易的時間"></textarea>
       </div>
       <div id="orderMeta" class="order-meta hidden">
         <span>訂單編號：<b id="orderNumber">—</b></span>
@@ -3905,7 +3968,7 @@ function renderOrders(){
       <div class="order-total">原訂單金額：${total}${o.actualAmount!==undefined&&o.actualAmount!==null&&String(o.actualAmount)!==""?`　｜　實際交易金額：${esc(String(o.actualAmount))}`:""}</div>
       <div class="order-admin-edit">
         <div class="order-admin-row"><label>實際交易金額</label><input class="order-admin-input" type="number" min="0" step="1" inputmode="numeric" data-order-amount="${esc(o.id)}" value="${esc(o.actualAmount!==undefined&&o.actualAmount!==null?String(o.actualAmount):String(total))}"></div>
-        <div class="order-admin-row"><label>賣家備註</label><textarea class="order-admin-input order-admin-note" maxlength="500" data-order-seller-note="${esc(o.id)}" placeholder="只有管理員看得到">${esc(o.sellerNote||"")}</textarea></div>
+        <div class="order-admin-row"><label>我的備註</label><textarea class="order-admin-input order-admin-note" maxlength="500" data-order-seller-note="${esc(o.id)}" placeholder="自己看的備註">${esc(o.sellerNote||"")}</textarea></div>
         <button class="btn order-admin-save" type="button" data-order-save="${esc(o.id)}">儲存金額與備註</button>
       </div>
       <div class="order-actions">${pending?`<button class="btn primary" type="button" data-order-done="${esc(o.id)}">完成交易</button><button class="btn" type="button" data-order-cancel="${esc(o.id)}">取消訂單</button>`:""}<button class="btn order-delete" type="button" data-order-delete="${esc(o.id)}">刪除訂單</button></div>
