@@ -1537,6 +1537,43 @@ html.page-visible body{visibility:visible;}
   #cartDialog #orderNoteInput.checkout-note-input{width:min(230px,100%)!important}
 }
 </style>
+
+<style id="checkout-spacing-compact-v6">
+/* 結帳區只收緊垂直留白，保留目前造型與寬度 */
+#cartDialog #checkoutInfo{
+  margin-top:9px!important;
+  padding:7px 10px!important;
+  gap:5px!important;
+}
+#cartDialog .checkout-details-box{
+  padding:1px 12px!important;
+}
+#cartDialog .checkout-details-box .checkout-field{
+  padding:5px 0!important;
+  gap:8px!important;
+}
+#cartDialog .checkout-details-box .checkout-options label{
+  padding:5px 10px!important;
+}
+#cartDialog #tradeIdInput.checkout-id-input{
+  height:30px!important;min-height:30px!important;padding:4px 10px!important;
+}
+#cartDialog #orderNoteInput.checkout-note-input{
+  height:32px!important;min-height:32px!important;padding:5px 11px!important;
+}
+#cartDialog .cart-summary{margin-top:9px!important;padding:10px 12px!important}
+#cartDialog .cart-actions{margin-top:8px!important;gap:7px!important}
+#cartDialog .manual-shot-wrap{gap:3px!important}
+#cartDialog .manual-shot-hint{font-size:11px!important;line-height:1.25!important}
+@media(max-width:560px){
+  #cartDialog #checkoutInfo{margin-top:7px!important;padding:6px 8px!important}
+  #cartDialog .checkout-details-box{padding:1px 9px!important}
+  #cartDialog .checkout-details-box .checkout-field{padding:4px 0!important;gap:6px!important}
+  #cartDialog .checkout-details-box .checkout-options label{padding:5px 8px!important}
+  #cartDialog .cart-summary{margin-top:7px!important;padding:9px 10px!important}
+  #cartDialog .cart-actions{margin-top:7px!important}
+}
+</style>
 </head>
 <body>
 <header class="topbar">
@@ -1825,8 +1862,8 @@ html.page-visible body{visibility:visible;}
           </div>
         </div>
         <div class="checkout-field checkout-text-field checkout-note-field">
-          <label class="checkout-label" for="orderNoteInput">留言</label>
-          <textarea id="orderNoteInput" class="checkout-text-input checkout-note-input" maxlength="300" rows="2" placeholder="可以留下希望的交易時間"></textarea>
+          <label class="checkout-label" for="orderNoteInput">留言（可以留下希望的交易時間）</label>
+          <textarea id="orderNoteInput" class="checkout-text-input checkout-note-input" maxlength="300" rows="2" placeholder=""></textarea>
         </div>
       </div>
       <div id="orderMeta" class="order-meta hidden">
