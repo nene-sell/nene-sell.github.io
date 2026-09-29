@@ -1505,6 +1505,38 @@ html.page-visible body{visibility:visible;}
   }
 }
 </style>
+
+<style id="checkout-compact-aligned-v5">
+/* 結帳資料：四列緊湊對齊，減少留白 */
+#cartDialog .checkout-details-box{padding:4px 14px!important}
+#cartDialog .checkout-details-box .checkout-field{
+  display:grid!important;grid-template-columns:88px minmax(0,1fr)!important;align-items:center!important;
+  gap:10px!important;padding:8px 0!important;min-height:0!important;
+}
+#cartDialog .checkout-details-box .checkout-label{margin:0!important;text-align:left!important;white-space:nowrap}
+#cartDialog .checkout-details-box .checkout-options{justify-content:center!important;gap:8px!important;width:auto!important}
+#cartDialog .checkout-details-box .checkout-options label{padding:6px 12px!important;min-width:70px!important}
+#cartDialog #tradeIdInput.checkout-id-input{
+  justify-self:center!important;display:block!important;width:160px!important;max-width:100%!important;
+  height:32px!important;min-height:32px!important;padding:5px 10px!important;margin:0!important;
+  border-radius:999px!important;text-align:center!important;resize:none!important;overflow:hidden!important;
+}
+#cartDialog .checkout-details-box .checkout-note-field{display:grid!important}
+#cartDialog #orderNoteInput.checkout-note-input{
+  justify-self:center!important;display:block!important;width:min(260px,100%)!important;max-width:100%!important;
+  height:36px!important;min-height:36px!important;padding:7px 12px!important;margin:0!important;
+  border-radius:999px!important;text-align:center!important;line-height:20px!important;resize:none!important;overflow:hidden!important;
+}
+#cartDialog #orderNoteInput::placeholder{text-align:center!important}
+@media(max-width:560px){
+  #cartDialog .checkout-details-box{padding:3px 11px!important}
+  #cartDialog .checkout-details-box .checkout-field{grid-template-columns:76px minmax(0,1fr)!important;gap:7px!important;padding:7px 0!important}
+  #cartDialog .checkout-details-box .checkout-options{gap:6px!important}
+  #cartDialog .checkout-details-box .checkout-options label{padding:6px 9px!important;min-width:62px!important}
+  #cartDialog #tradeIdInput.checkout-id-input{width:140px!important;max-width:100%!important}
+  #cartDialog #orderNoteInput.checkout-note-input{width:min(230px,100%)!important}
+}
+</style>
 </head>
 <body>
 <header class="topbar">
