@@ -170,6 +170,10 @@ dialog input:focus,dialog select:focus{border-color:#666}
 }
 
 
+
+/* 交易 ID 與留言使用一致的輸入樣式 */
+#cartDialog .checkout-id-input{min-height:44px;resize:none;}
+
 </style>
 
 <style>
@@ -1754,8 +1758,8 @@ html.page-visible body{visibility:visible;}
           </div>
         </div>
         <div class="checkout-field checkout-text-field">
-          <label class="checkout-label" for="tradeIdInput">交易 ID <small>選填</small></label>
-          <input id="tradeIdInput" class="checkout-text-input" type="text" maxlength="80" autocomplete="off" placeholder="">
+          <label class="checkout-label" for="tradeIdInput">交易 ID</label>
+          <textarea id="tradeIdInput" class="checkout-text-input checkout-note-input checkout-id-input" maxlength="80" rows="1" autocomplete="off" placeholder=""></textarea>
         </div>
         <div class="checkout-field">
           <span class="checkout-label">支付方式</span>
@@ -1765,7 +1769,7 @@ html.page-visible body{visibility:visible;}
           </div>
         </div>
         <div class="checkout-field checkout-text-field checkout-note-field">
-          <label class="checkout-label" for="orderNoteInput">留言 <small>選填</small></label>
+          <label class="checkout-label" for="orderNoteInput">留言</label>
           <textarea id="orderNoteInput" class="checkout-text-input checkout-note-input" maxlength="300" rows="2" placeholder="可以留下希望的交易時間"></textarea>
         </div>
       </div>
