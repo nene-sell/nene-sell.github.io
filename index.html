@@ -454,7 +454,7 @@ dialog input:focus,dialog select:focus{border-color:#666}
 
 
 <style>
-/* === 新增／編輯商品：NEW 與已預訂選項 === */
+/* === 新增／編輯商品：商品標記與販售狀態 === */
 .product-extra-options{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -1778,9 +1778,9 @@ html.page-visible body{visibility:visible;}
         <label class="option-title" for="productStatus">販售狀態</label>
         <select id="productStatus">
           <option value="selling">販售中</option>
-          <option value="reserved">已預訂</option>
           <option value="sold">售完</option>
         </select>
+        <small class="hint">預定請直接填「預定數量」，不需要另外切換商品狀態。</small>
         
       </div>
     </div>
@@ -2632,7 +2632,7 @@ function render(){
       .map((p,index)=>({
         p,
         index,
-        sold: p.category!=="收購區" && p.status!=="reserved" && (p.status==="sold" || getStock(p)<=0)
+        sold: p.category!=="收購區" && (p.status==="sold" || getStock(p)<=0)
       }))
       .sort((a,b)=>{
         if(a.sold!==b.sold) return a.sold ? 1 : -1;
@@ -2654,8 +2654,8 @@ $("#productCount").textContent=`${list.length} 件商品`;
   list.forEach(p=>{
     const isBuy=p.category==="收購區";
     const isExchange=p.category==="交換區";
-    const reserved=!isBuy && p.status==="reserved";
-    const sold=!isBuy && !reserved && (p.status==="sold" || getStock(p)<=0);
+    const reserved=false; // 舊版整件「已預訂」狀態停用，改由預定數量管理
+    const sold=!isBuy && (p.status==="sold" || getStock(p)<=0);
     const totalStock=getStock(p);
     const reservedQty=isBuy?0:getReserved(p);
     const limit=isBuy?totalStock:getAvailableStock(p);
@@ -2985,14 +2985,14 @@ async function generateProductCatalogImage(selectedFile=null){
 
       if(cat==="交換區"){
         // 已換出 / 已預訂的不放進交換截圖。
-        const unavailable=p.status==="sold" || p.status==="reserved" || stock<=0;
+        const unavailable=p.status==="sold" || stock<=0;
         if(unavailable)return false;
         const offers=normalizeExchangeOffers(p).filter(x=>x && (x.name||x.imageData));
         return !!(offers.length || p.exchangeWantImageData || p.exchangeWantName);
       }
 
       const sold=p.status==="sold" || stock<=0;
-      if(sold || p.status==="reserved")return false;
+      if(sold)return false;
       return !!p.imageData;
     });
 
@@ -3506,7 +3506,7 @@ function openProduct(p=null){
   $("#purchaseQtyText").value=p?.purchaseQtyText||"";
   if($("#productRecentFeatured")) $("#productRecentFeatured").checked=!!p?.recentFeatured;
   if($("#productIsNew")) $("#productIsNew").checked=!!p && isNewActive(p);
-  if($("#productStatus")) $("#productStatus").value=p?.status||"selling";
+  if($("#productStatus")) $("#productStatus").value=(p?.status==="sold"?"sold":"selling");
   loadVariantRows(p);
   $("#productImage").value="";
   editingImage=p?.imageData||"";
@@ -6016,7 +6016,7 @@ main.wrap{
 </style>
 
 <style>
-/* 分類／新品／已預訂／售完固定在同一排 */
+/* 分類／新品／預定數量／售完固定在同一排 */
 .badge-row{
   display:flex !important;
   align-items:center !important;
