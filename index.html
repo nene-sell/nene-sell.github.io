@@ -1680,11 +1680,21 @@ html.page-visible body{visibility:visible;}
           <label><input type="radio" name="paymentMethod" value="轉帳"> 轉帳</label>
         </div>
       </div>
+      <div class="checkout-field checkout-text-field">
+        <label class="checkout-label" for="tradeIdInput">交易 ID <small>選填</small></label>
+        <input id="tradeIdInput" class="checkout-text-input" type="text" maxlength="80" autocomplete="off" placeholder="可填遊戲 ID／交易 ID">
+      </div>
+      <div class="checkout-field checkout-text-field">
+        <label class="checkout-label" for="orderNoteInput">留言 <small>選填</small></label>
+        <textarea id="orderNoteInput" class="checkout-text-input checkout-note-input" maxlength="300" rows="2" placeholder="可以寫希望交易的時間"></textarea>
+      </div>
       <div id="orderMeta" class="order-meta hidden">
         <span>訂單編號：<b id="orderNumber">—</b></span>
         <span>訂單狀態：<b id="orderStatus">待交易</b></span>
         <span>交易角色：<b id="orderGender">—</b></span>
         <span>付款方式：<b id="orderPayment">—</b></span>
+        <span id="orderTradeIdRow" class="order-meta-wide hidden">交易 ID：<b id="orderTradeId">—</b></span>
+        <span id="orderNoteRow" class="order-meta-wide hidden">留言：<b id="orderNote">—</b></span>
       </div>
     </div>
     <div class="cart-actions">
@@ -3754,10 +3764,16 @@ function prepareOrderMeta(){
   if(!payment) throw new Error("請先選擇糖果或轉帳");
   $("#orderNumber").textContent="建立中…";
   $("#orderStatus").textContent="待交易";
+  const tradeId=String($("#tradeIdInput")?.value||"").trim().slice(0,80);
+  const note=String($("#orderNoteInput")?.value||"").trim().slice(0,300);
   $("#orderGender").textContent=gender;
   $("#orderPayment").textContent=payment;
+  $("#orderTradeId").textContent=tradeId||"—";
+  $("#orderNote").textContent=note||"—";
+  $("#orderTradeIdRow").classList.toggle("hidden",!tradeId);
+  $("#orderNoteRow").classList.toggle("hidden",!note);
   $("#orderMeta").classList.remove("hidden");
-  return {gender,payment,status:"待交易"};
+  return {gender,payment,tradeId,note,status:"待交易"};
 }
 
 function setOrderDate(){
@@ -3841,6 +3857,8 @@ async function checkoutSaleCart(orderInfo){
     status:"待交易",
     gender:orderInfo.gender,
     payment:orderInfo.payment,
+    tradeId:orderInfo.tradeId||"",
+    note:orderInfo.note||"",
     items:orderItems,
     createdAt:serverTimestamp(),
     createdAtText:`${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
@@ -3851,6 +3869,10 @@ async function checkoutSaleCart(orderInfo){
   $("#orderStatus").textContent="待交易";
   $("#orderGender").textContent=orderInfo.gender;
   $("#orderPayment").textContent=orderInfo.payment;
+  $("#orderTradeId").textContent=orderInfo.tradeId||"—";
+  $("#orderNote").textContent=orderInfo.note||"—";
+  $("#orderTradeIdRow").classList.toggle("hidden",!orderInfo.tradeId);
+  $("#orderNoteRow").classList.toggle("hidden",!orderInfo.note);
   $("#orderMeta").classList.remove("hidden");
   return {orderNumber,status:"待交易"};
 }
@@ -3877,6 +3899,8 @@ function renderOrders(){
     return `<article class="order-card">
       <div class="order-card-head"><b>${esc(o.orderNumber||o.id||"")}</b><span class="order-status status-${pending?"pending":o.status==="已完成"?"done":"cancel"}">${esc(o.status||"待交易")}</span></div>
       <div class="order-sub">${esc(o.createdAtText||"")}　${esc(o.gender||"")}　${esc(o.payment||"")}</div>
+      ${o.tradeId?`<div class="order-extra"><b>交易 ID：</b>${esc(o.tradeId)}</div>`:""}
+      ${o.note?`<div class="order-extra"><b>留言：</b>${esc(o.note)}</div>`:""}
       <div class="order-items">${itemText||"—"}</div>
       <div class="order-total">金額：${total}</div>
       <div class="order-actions">${pending?`<button class="btn primary" type="button" data-order-done="${esc(o.id)}">完成交易</button><button class="btn" type="button" data-order-cancel="${esc(o.id)}">取消訂單</button>`:""}<button class="btn order-delete" type="button" data-order-delete="${esc(o.id)}">刪除訂單</button></div>
@@ -3969,6 +3993,8 @@ function clearSubmittedList(){
   renderCart();render();updateCartFab();
   if(cartViewMode!=="buy"){
     document.querySelectorAll('input[name="tradeGender"],input[name="paymentMethod"]').forEach(x=>x.checked=false);
+    if($("#tradeIdInput")) $("#tradeIdInput").value="";
+    if($("#orderNoteInput")) $("#orderNoteInput").value="";
   }
 }
 
@@ -6175,5 +6201,7 @@ main.wrap{
   accent-color:#9b7156;
 }
 #minimumOfferField input{margin-top:6px}
+
+.checkout-text-field{align-items:flex-start}.checkout-label small{font-size:11px;font-weight:700;color:#9a887c;margin-left:5px}.checkout-text-input{width:min(100%,360px);box-sizing:border-box;border:1px solid #d7c7b8;border-radius:10px;background:#fff;color:#4d392f;padding:9px 11px;font:inherit;outline:none}.checkout-text-input:focus{border-color:#bda38e;box-shadow:0 0 0 3px rgba(189,163,142,.12)}.checkout-note-input{resize:vertical;min-height:62px}.order-meta-wide{grid-column:1/-1;white-space:pre-wrap;overflow-wrap:anywhere}.order-extra{margin-top:7px;padding:8px 10px;border-radius:9px;background:#f8f2ed;color:#5e493d;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}.screenshot-mode .checkout-text-field{display:none!important}
 </style>
 
