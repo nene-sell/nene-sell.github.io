@@ -1717,7 +1717,7 @@ html.page-visible body{visibility:visible;}
   </div>
 </div>
 
-  <div class="admin-tools"><button id="backupBtn" class="btn hidden" type="button">完整備份</button><button id="restoreBtn" class="btn hidden" type="button">還原備份</button><input id="restoreFileInput" type="file" accept=".zip,application/zip" class="hidden"><button id="ordersBtn" class="btn hidden" type="button">訂單<span id="ordersBadge" class="orders-badge hidden">0</span></button><button id="adminBtn" class="btn" title="管理員登入" aria-label="管理員登入">⚙️</button></div>
+  <div class="admin-tools"><button id="backupBtn" class="btn hidden" type="button">完整備份</button><button id="restoreBtn" class="btn hidden" type="button">還原備份</button><input id="restoreFileInput" type="file" accept=".zip,application/zip" class="hidden"><button id="ordersBtn" class="btn hidden" type="button">訂單<span id="ordersBadge" class="orders-badge hidden">0</span></button><button id="palettePreviewBtn" class="btn hidden" type="button">🎨 配色</button><button id="adminBtn" class="btn" title="管理員登入" aria-label="管理員登入">⚙️</button></div>
 </header>
 
 <main class="wrap">
@@ -3948,6 +3948,7 @@ $("#adminBtn").onclick=async()=>{
 onAuthStateChanged(auth,user=>{
   currentUser = user && user.uid===ADMIN_UID ? user : null;
   $("#ordersBtn")?.classList.toggle("hidden",!isAdmin());
+  $("#palettePreviewBtn")?.classList.toggle("hidden",!isAdmin());
   $("#backupBtn")?.classList.toggle("hidden",!isAdmin());
   $("#restoreBtn")?.classList.toggle("hidden",!isAdmin());
   startOrdersListener();
@@ -4810,6 +4811,85 @@ setTimeout(()=>document.querySelector(".tabs")?.classList.remove("category-setti
 
 
 
+
+
+
+<!-- === 管理員配色預覽：僅本機瀏覽器，不寫入 Firebase === -->
+<style id="palette-preview-style">
+:root{
+  --pv-bg:#f7f3ed;--pv-bg2:#f3ede5;--pv-panel:#fffaf6;--pv-panel2:#eee7df;
+  --pv-line:#d5c8bd;--pv-text:#4b3b32;--pv-muted:#85756a;--pv-accent:#9b7156;
+  --pv-accent2:#d8bea8;--pv-top:#decfc0;--pv-chip:#eee7de;--pv-input:#fffaf6;
+}
+body.palette-preview-active{
+  color:var(--pv-text)!important;
+  background:radial-gradient(circle at 20% -10%,color-mix(in srgb,var(--pv-accent) 18%,transparent),transparent 34%),linear-gradient(180deg,var(--pv-bg) 0%,var(--pv-bg2) 100%)!important;
+}
+body.palette-preview-active .topbar{background:color-mix(in srgb,var(--pv-top) 96%,transparent)!important;border-color:var(--pv-line)!important}
+body.palette-preview-active .brand h1,body.palette-preview-active .section-head h3,body.palette-preview-active .card-title,body.palette-preview-active .price{color:var(--pv-text)!important}
+body.palette-preview-active .brand small,body.palette-preview-active .section-head p,body.palette-preview-active .stock,body.palette-preview-active footer{color:var(--pv-muted)!important}
+body.palette-preview-active .btn{background:var(--pv-accent2)!important;border-color:color-mix(in srgb,var(--pv-accent) 45%,var(--pv-line))!important;color:var(--pv-text)!important}
+body.palette-preview-active .btn:hover{background:color-mix(in srgb,var(--pv-accent2) 78%,var(--pv-accent))!important}
+body.palette-preview-active .btn.primary,body.palette-preview-active .tab.active,body.palette-preview-active .sub-tab.active{background:var(--pv-accent)!important;border-color:var(--pv-accent)!important;color:#fffaf7!important}
+body.palette-preview-active .tab,body.palette-preview-active .sub-tab{background:var(--pv-chip)!important;border-color:var(--pv-line)!important;color:var(--pv-text)!important}
+body.palette-preview-active .usage-guide,body.palette-preview-active .order-card,body.palette-preview-active .order-admin-edit{background:var(--pv-panel2)!important;border-color:var(--pv-line)!important}
+body.palette-preview-active .usage-step-icon{background:var(--pv-panel)!important;border-color:var(--pv-line)!important;color:var(--pv-accent)!important}
+body.palette-preview-active .usage-guide h3,body.palette-preview-active .usage-step b,body.palette-preview-active .usage-trade-note{color:var(--pv-text)!important}
+body.palette-preview-active .usage-step,body.palette-preview-active .usage-note{color:var(--pv-muted)!important}
+body.palette-preview-active .usage-steps::before,body.palette-preview-active .usage-trade-note{border-color:var(--pv-line)!important;background-color:var(--pv-line)}
+body.palette-preview-active .search,body.palette-preview-active input:not([type=file]),body.palette-preview-active select,body.palette-preview-active textarea{background:var(--pv-input)!important;border-color:var(--pv-line)!important;color:var(--pv-text)!important}
+body.palette-preview-active .category-menu,body.palette-preview-active .buyer-offer-dialog,body.palette-preview-active .catalog-picker-box{background:var(--pv-panel)!important;border-color:var(--pv-line)!important;color:var(--pv-text)!important}
+body.palette-preview-active .category-menu button,body.palette-preview-active .catalog-picker-grid button,body.palette-preview-active .catalog-picker-cancel{background:var(--pv-chip)!important;border-color:var(--pv-line)!important;color:var(--pv-text)!important}
+body.palette-preview-active .category-menu button:hover,body.palette-preview-active .category-menu button.active{background:var(--pv-accent)!important;color:#fff!important}
+body.palette-preview-active .discord-blue-badge{background:color-mix(in srgb,var(--pv-panel) 82%,transparent)!important;border-color:var(--pv-line)!important;color:var(--pv-accent)!important}
+body.palette-preview-active .discord-message-text,body.palette-preview-active .discord-soft-heart{color:var(--pv-accent)!important}
+body.palette-preview-active .new-badge,body.palette-preview-active .reserved-badge,body.palette-preview-active .limited-mini{background:var(--pv-accent)!important;color:#fffaf7!important}
+body.palette-preview-active .cart-fab{background:var(--pv-accent)!important;border-color:var(--pv-accent)!important;color:#fffaf7!important}
+body.palette-preview-active .cart-fab .cart-count,body.palette-preview-active .orders-badge{background:color-mix(in srgb,var(--pv-accent) 72%,#5b3940)!important;color:#fff!important}
+/* 商品圖完全不套色；卡片僅調整外框/底色 */
+body.palette-preview-active .card:not(.exchange-card){background:var(--pv-panel)!important;border-color:var(--pv-line)!important;color:var(--pv-text)!important}
+body.palette-preview-active .card:not(.exchange-card) .card-body{background:var(--pv-panel)!important;color:var(--pv-text)!important}
+body.palette-preview-active .card:not(.exchange-card) .badge{border-color:var(--pv-line)!important;color:var(--pv-muted)!important}
+
+#palettePreviewPanel{position:fixed;inset:0;z-index:1000000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(40,31,28,.42);backdrop-filter:blur(4px)}
+#palettePreviewPanel.show{display:flex}
+.palette-preview-box{width:min(520px,100%);max-height:86vh;overflow:auto;padding:20px;border-radius:20px;background:#fbf7f4;border:1px solid #d8cbc2;box-shadow:0 22px 70px rgba(43,31,28,.28);color:#4c3c35}
+.palette-preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:5px}.palette-preview-head b{font-size:18px}.palette-preview-close{width:34px;height:34px;border:0;border-radius:10px;background:#eadfd8;color:#5c4940;font-size:20px}.palette-preview-help{font-size:12px;color:#8b7b72;margin-bottom:14px;line-height:1.5}.palette-preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.palette-choice{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #ddd0c8;border-radius:13px;background:#fff;cursor:pointer;text-align:left;color:#55443c;font-weight:800}.palette-choice:hover{background:#f5eeea}.palette-choice.active{outline:2px solid #8f6e64;outline-offset:1px}.palette-swatches{display:flex;gap:3px;flex:0 0 auto}.palette-swatches i{display:block;width:15px;height:26px}.palette-swatches i:first-child{border-radius:7px 0 0 7px}.palette-swatches i:last-child{border-radius:0 7px 7px 0}.palette-preview-reset{width:100%;margin-top:12px;padding:10px;border:1px solid #d5c7bf;border-radius:11px;background:#f2e9e4;color:#59473f;font-weight:800;cursor:pointer}@media(max-width:520px){.palette-preview-grid{grid-template-columns:1fr}.palette-preview-box{padding:16px}}
+</style>
+<div id="palettePreviewPanel" aria-hidden="true">
+  <div class="palette-preview-box">
+    <div class="palette-preview-head"><b>🎨 配色預覽</b><button class="palette-preview-close" type="button" aria-label="關閉">×</button></div>
+    <div class="palette-preview-help">只會記在這台瀏覽器，不會寫入 Firebase，也不會影響其他人。</div>
+    <div id="palettePreviewGrid" class="palette-preview-grid"></div>
+    <button id="palettePreviewReset" class="palette-preview-reset" type="button">恢復網站原本配色</button>
+  </div>
+</div>
+<script id="palette-preview-script">
+(()=>{
+  const themes={
+    milk:{name:'原奶茶',c:['#f7f3ed','#fffaf6','#9b7156'],v:['#f7f3ed','#f3ede5','#fffaf6','#eee7df','#d5c8bd','#4b3b32','#85756a','#9b7156','#d8bea8','#decfc0','#eee7de','#fffaf6']},
+    deepMilk:{name:'深奶茶',c:['#d7c7b9','#eaded4','#80604f'],v:['#d7c7b9','#cdb9aa','#eaded4','#dfcfc3','#bba696','#43342d','#75655b','#80604f','#c3a58f','#bda694','#d6c5b8','#f2e9e2']},
+    oat:{name:'燕麥灰褐',c:['#d8d2ca','#ece7e1','#716961'],v:['#d8d2ca','#cec7bf','#ece7e1','#e2ddd6','#bbb3aa','#3f3a36','#746d67','#716961','#c5bbb1','#c3bbb2','#d8d1ca','#f3f0ec']},
+    caramel:{name:'焦糖可可',c:['#d2bca8','#ead9ca','#805d46'],v:['#d2bca8','#c5aa94','#ead9ca','#ddc6b4','#b6957d','#49372c','#796353','#805d46','#c79f7f','#b99276','#d9c0ad','#f3e5da']},
+    rose:{name:'玫瑰灰奶茶',c:['#ded3d0','#eee5e3','#806963'],v:['#ded3d0','#d4c6c3','#eee5e3','#e5d9d6','#c2b2ae','#473b39','#796b68','#806963','#c7aaa4','#c4b0ac','#ddd0cd','#f5efed']},
+    deepRose:{name:'深玫瑰灰',c:['#c6b5b4','#ddd0cf','#755b5d'],v:['#c6b5b4','#bba8a8','#ddd0cf','#d2c1c0','#a99191','#403536','#716163','#755b5d','#b79695','#aa9292','#cbbaba','#eee6e5']},
+    mistPink:{name:'霧粉灰',c:['#ddd1d4','#efe5e7','#8b6972'],v:['#ddd1d4','#d4c5c9','#efe5e7','#e5d8dc','#c4b2b7','#493b40','#7d6b70','#8b6972','#c8a9b1','#c3adb3','#ded0d4','#f6eef0']},
+    mauve:{name:'藕紫奶灰',c:['#d4ced5','#e8e2e9','#756879'],v:['#d4ced5','#c9c1ca','#e8e2e9','#ddd6df','#b7aeb9','#403a43','#716975','#756879','#b8a9bc','#b3a8b6','#d2cad4','#f1edf2']},
+    sage:{name:'鼠尾草奶灰',c:['#d2d5cc','#e7e9e2','#687066'],v:['#d2d5cc','#c7cbc0','#e7e9e2','#dce0d7','#b3b9ad','#3b403a','#6b7168','#687066','#aeb7a8','#b0b7aa','#d1d6cc','#f0f2ed']},
+    blueGray:{name:'霧霾藍灰',c:['#cfd4d7','#e4e9eb','#62717a'],v:['#cfd4d7','#c2c9cd','#e4e9eb','#d8dfe2','#adb8be','#384147','#69757c','#62717a','#a8b6bd','#aab5ba','#ced7db','#eef2f3']}
+  };
+  const keys=['--pv-bg','--pv-bg2','--pv-panel','--pv-panel2','--pv-line','--pv-text','--pv-muted','--pv-accent','--pv-accent2','--pv-top','--pv-chip','--pv-input'];
+  const panel=document.getElementById('palettePreviewPanel'),grid=document.getElementById('palettePreviewGrid'),btn=document.getElementById('palettePreviewBtn');
+  if(!panel||!grid||!btn)return;
+  const apply=(id,save=true)=>{document.body.classList.toggle('palette-preview-active',!!themes[id]);if(themes[id]) keys.forEach((k,i)=>document.documentElement.style.setProperty(k,themes[id].v[i]));else keys.forEach(k=>document.documentElement.style.removeProperty(k));grid.querySelectorAll('.palette-choice').forEach(x=>x.classList.toggle('active',x.dataset.theme===id));if(save){try{id?localStorage.setItem('nenePalettePreview',id):localStorage.removeItem('nenePalettePreview')}catch{}}};
+  Object.entries(themes).forEach(([id,t])=>{const b=document.createElement('button');b.type='button';b.className='palette-choice';b.dataset.theme=id;b.innerHTML=`<span class="palette-swatches">${t.c.map(x=>`<i style="background:${x}"></i>`).join('')}</span><span>${t.name}</span>`;b.addEventListener('click',()=>apply(id));grid.appendChild(b)});
+  btn.addEventListener('click',()=>{panel.classList.add('show');panel.setAttribute('aria-hidden','false')});
+  panel.querySelector('.palette-preview-close').addEventListener('click',()=>{panel.classList.remove('show');panel.setAttribute('aria-hidden','true')});
+  panel.addEventListener('click',e=>{if(e.target===panel){panel.classList.remove('show');panel.setAttribute('aria-hidden','true')}});
+  document.getElementById('palettePreviewReset').addEventListener('click',()=>apply(null));
+  try{const saved=localStorage.getItem('nenePalettePreview');if(saved&&themes[saved])apply(saved,false)}catch{}
+})();
+</script>
 
 </body>
 </html>
