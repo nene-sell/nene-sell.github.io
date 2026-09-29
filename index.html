@@ -1481,6 +1481,30 @@ html.page-visible body{visibility:visible;}
   #cartDialog .checkout-details-box .checkout-text-field{display:grid;grid-template-columns:1fr;gap:7px}
 }
 </style>
+
+<style id="trade-id-compact-pill-v4">
+/* 交易 ID：比照角色選項，使用精簡置中的小框 */
+#cartDialog .checkout-details-box .checkout-field:has(#tradeIdInput){
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+#cartDialog #tradeIdInput.checkout-id-input{
+  display:block;flex:0 0 168px;width:168px;max-width:48%;height:34px;min-height:34px;
+  padding:6px 12px;margin:0;border:1px solid #dfd2c7;border-radius:999px;
+  background:#fff;color:#5b493e;text-align:center;line-height:20px;resize:none;overflow:hidden;
+  box-shadow:none;
+}
+#cartDialog #tradeIdInput.checkout-id-input:focus{
+  outline:none;border-color:#cdb6a4;box-shadow:0 0 0 3px rgba(191,163,141,.10);
+}
+@media(max-width:560px){
+  #cartDialog .checkout-details-box .checkout-field:has(#tradeIdInput){
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+  }
+  #cartDialog #tradeIdInput.checkout-id-input{
+    flex:0 0 150px;width:150px;max-width:58%;height:34px;min-height:34px;
+  }
+}
+</style>
 </head>
 <body>
 <header class="topbar">
