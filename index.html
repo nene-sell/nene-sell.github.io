@@ -3045,38 +3045,9 @@ async function generateProductCatalogImage(selectedFile=null){
     ];
 
     function expandCatalogItems(items, group){
-      const expanded=[];
-      for(const p of items){
-        // 交換區本身是一組「我提供 ⇄ 想換」，維持原本一商品一卡。
-        if(group.mode==="exchange"){
-          expanded.push(p);
-          continue;
-        }
-
-        const variants=getVariants(p);
-        if(!variants.length){
-          expanded.push(p);
-          continue;
-        }
-
-        // 混合式總覽：有獨立實體圖的款式才拆成自己的商品卡；
-        // 沒有獨立圖片的款式留在主商品卡裡，避免重複同一張主圖造成畫面混亂。
-        const pictured=variants.filter(v=>v.stock>0 && String(v.imageData||"").trim());
-        const grouped=variants.filter(v=>v.stock>0 && !String(v.imageData||"").trim());
-
-        if(grouped.length){
-          expanded.push({
-            ...p,
-            _catalogVariantRows:grouped.map(v=>({name:v.name,qty:v.stock})),
-            _catalogStock:grouped.reduce((sum,v)=>sum+v.stock,0)
-          });
-        }
-
-        for(const v of pictured){
-          expanded.push({...p,_catalogVariant:{...v}});
-        }
-      }
-      return expanded;
+      // 總覽維持「一個商品一張卡」。
+      // 款式不再拆成獨立商品卡，避免沒有實體款式圖時出現大量重複圖片。
+      return items;
     }
 
     let available=categoryGroups.map(group=>({
@@ -3326,11 +3297,19 @@ async function generateProductCatalogImage(selectedFile=null){
             }
 
             if(group.mode!=="exchange" && variantLines.length){
+              // 款式集中留在同一張商品卡，用淡奶茶小標籤呈現，截圖時更容易辨識。
               ctx.textAlign="center";
-              ctx.fillStyle="#75665e";
               ctx.font='600 12px Arial,"Microsoft JhengHei",sans-serif';
               variantLines.forEach((line,li)=>{
-                ctx.fillText(line,x+cardW/2,cy+baseCardH+13+li*variantLineH);
+                const py=cy+baseCardH+2+li*variantLineH;
+                const pillW=Math.min(cardW-12,Math.max(54,ctx.measureText(line).width+18));
+                const pillH=15;
+                const px=x+(cardW-pillW)/2;
+                ctx.fillStyle="#f1e7df";
+                catalogRoundRect(ctx,px,py,pillW,pillH,7.5);
+                ctx.fill();
+                ctx.fillStyle="#75665e";
+                ctx.fillText(line,x+cardW/2,py+11.5);
               });
             }
             ctx.textAlign="center";
