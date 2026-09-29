@@ -3052,15 +3052,28 @@ async function generateProductCatalogImage(selectedFile=null){
           expanded.push(p);
           continue;
         }
+
         const variants=getVariants(p);
-        if(variants.length){
-          // 總覽圖改成「一個款式一張卡」；售完款式不輸出。
-          for(const v of variants){
-            if(v.stock<=0)continue;
-            expanded.push({...p,_catalogVariant:{...v}});
-          }
-        }else{
+        if(!variants.length){
           expanded.push(p);
+          continue;
+        }
+
+        // 混合式總覽：有獨立實體圖的款式才拆成自己的商品卡；
+        // 沒有獨立圖片的款式留在主商品卡裡，避免重複同一張主圖造成畫面混亂。
+        const pictured=variants.filter(v=>v.stock>0 && String(v.imageData||"").trim());
+        const grouped=variants.filter(v=>v.stock>0 && !String(v.imageData||"").trim());
+
+        if(grouped.length){
+          expanded.push({
+            ...p,
+            _catalogVariantRows:grouped.map(v=>({name:v.name,qty:v.stock})),
+            _catalogStock:grouped.reduce((sum,v)=>sum+v.stock,0)
+          });
+        }
+
+        for(const v of pictured){
+          expanded.push({...p,_catalogVariant:{...v}});
         }
       }
       return expanded;
@@ -3183,7 +3196,7 @@ async function generateProductCatalogImage(selectedFile=null){
           const rowItems=sec.items.slice(r*cols,(r+1)*cols);
           ctx.font='600 12px Arial,"Microsoft JhengHei",sans-serif';
           const variantLinesByItem=rowItems.map(p=>
-            p._catalogVariant ? [] : catalogWrapVariantLines(ctx,catalogVariantRows(p),cardW-12)
+            p._catalogVariant ? [] : catalogWrapVariantLines(ctx,(p._catalogVariantRows || catalogVariantRows(p)),cardW-12)
           );
           const maxVariantLines=Math.max(0,...variantLinesByItem.map(v=>v.length));
           const hasSplitVariant=rowItems.some(p=>!!p._catalogVariant);
@@ -3264,7 +3277,7 @@ async function generateProductCatalogImage(selectedFile=null){
             ctx.fillStyle="#493a32";
             ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
 
-            const catalogStock=p._catalogVariant ? p._catalogVariant.stock : getStock(p);
+            const catalogStock=p._catalogVariant ? p._catalogVariant.stock : (Number.isFinite(Number(p._catalogStock)) ? Number(p._catalogStock) : getStock(p));
             if(group.mode==="exchange"){
               const offers=normalizeExchangeOffers(p).filter(o=>o && (o.name||o.imageData));
               const offerNames=offers.map(o=>o.name).filter(Boolean).join("＋");
