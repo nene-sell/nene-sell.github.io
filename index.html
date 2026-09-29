@@ -363,6 +363,8 @@ dialog input:focus,dialog select:focus{border-color:#666}
 <style>
 .status-field select{width:100%;padding:10px 11px;border:1px solid #c9b3a2;border-radius:9px;background:#fffaf6;color:#45372f}
 .reserved-card{opacity:.84}
+.reserved-qty-note{display:inline-flex;align-items:center;margin-left:6px;padding:3px 7px;border-radius:999px;background:#eee3db;color:#8a6755;font-size:11px;font-weight:800}
+.variant-reserved-input{width:76px!important}
 .reserved-badge{display:inline-flex;margin-left:5px;padding:4px 8px;border-radius:999px;background:#9b7156;color:#fff;font-size:10px;font-weight:900}
 .reserved-card .stock{color:#8b624b!important;font-weight:900}
 .add-cart.reserved-disabled{background:#b8a79a!important;border-color:#a89587!important;color:#f8eee8!important;cursor:not-allowed!important;opacity:.82}
@@ -1722,6 +1724,10 @@ html.page-visible body{visibility:visible;}
     <label id="stockNumberField"><span id="stockFieldLabel">庫存</span>
       <input id="productStock" type="number" min="0" step="1" value="1" placeholder="例如：5" required>
     </label>
+    <label id="reservedNumberField"><span>預定數量</span>
+      <input id="productReserved" type="number" min="0" step="1" value="0" placeholder="例如：6">
+      <small class="hint">保留實際總庫存；可購買數量會自動扣掉預定數量。</small>
+    </label>
     <label id="purchaseQtyTextField" class="hidden"><span>收購數量／說明</span>
       <input id="purchaseQtyText" type="text" maxlength="30" placeholder="例如：不限量、有就收、只收1個">
     </label>
@@ -2117,6 +2123,7 @@ function getVariants(p){
         .map(v=>({
           name:String(v?.name||"").trim(),
           stock:Math.max(0,Math.floor(Number(v?.stock)||0)),
+          reserved:Math.max(0,Math.floor(Number(v?.reserved ?? v?.reservedQty)||0)),
           imageData:String(v?.imageData||"")
         }))
         .filter(v=>v.name)
@@ -2135,6 +2142,22 @@ function getStock(p){
 function variantStock(p,name){
   const v=getVariants(p).find(x=>x.name===name);
   return v ? v.stock : 0;
+}
+function getReserved(p){
+  const variants=getVariants(p);
+  if(variants.length) return variants.reduce((sum,v)=>sum+Math.min(v.stock,v.reserved||0),0);
+  const n=Number(p?.reservedQty ?? p?.reserved);
+  return Number.isFinite(n) && n>0 ? Math.min(getStock(p),Math.floor(n)) : 0;
+}
+function getAvailableStock(p){
+  return Math.max(0,getStock(p)-getReserved(p));
+}
+function variantReserved(p,name){
+  const v=getVariants(p).find(x=>x.name===name);
+  return v ? Math.min(v.stock,v.reserved||0) : 0;
+}
+function variantAvailableStock(p,name){
+  return Math.max(0,variantStock(p,name)-variantReserved(p,name));
 }
 
 function parsePrice(price){
@@ -2209,7 +2232,7 @@ async function setStockDirect(p, value){
 function addToList(p, qty, mode="sale", variant=""){
   const vs=getVariants(p);
   if(vs.length && !variant){toast("請先選擇顏色／款式");return;}
-  const limit=vs.length?variantStock(p,variant):getStock(p);
+  const limit=mode==="buy" ? (vs.length?variantStock(p,variant):getStock(p)) : (vs.length?variantAvailableStock(p,variant):getAvailableStock(p));
   const n=Math.max(1,Math.floor(Number(qty)||1));
   const list=mode==="buy"?offerCart:cart;
   const existing=list.find(x=>x.id===p.id && String(x.variant||"")===String(variant||""));
@@ -2253,7 +2276,7 @@ function renderCart(){
     const p=products.find(x=>x.id===item.id);
     if(!p)return;
     const vs=getVariants(p);
-    const limit=vs.length?variantStock(p,item.variant||""):getStock(p);
+    const limit=buy ? (vs.length?variantStock(p,item.variant||""):getStock(p)) : (vs.length?variantAvailableStock(p,item.variant||""):getAvailableStock(p));
     if(item.qty>limit)item.qty=limit;
     if(item.qty<1)return;
 
@@ -2633,9 +2656,11 @@ $("#productCount").textContent=`${list.length} 件商品`;
     const isExchange=p.category==="交換區";
     const reserved=!isBuy && p.status==="reserved";
     const sold=!isBuy && !reserved && (p.status==="sold" || getStock(p)<=0);
-    const limit=getStock(p);
+    const totalStock=getStock(p);
+    const reservedQty=isBuy?0:getReserved(p);
+    const limit=isBuy?totalStock:getAvailableStock(p);
     const variants=getVariants(p);
-    const defaultVariant=variants.find(v=>v.stock>0)?.name||variants[0]?.name||"";
+    const defaultVariant=(isBuy?variants.find(v=>v.stock>0):variants.find(v=>variantAvailableStock(p,v.name)>0))?.name||variants[0]?.name||"";
     const selectedQty=qtyFor(p.id,isBuy?"buy":"sale",defaultVariant);
     const card=document.createElement("article");
     card.className=`card ${isBuy?"wanted-card":""}${isExchange?" exchange-card":""}${reserved?" reserved-card":""}${sold?" sold-card":""}`;
@@ -2644,7 +2669,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
       ? (p.purchaseQtyText ? `需求 ${p.purchaseQtyText}` : (limit===0 ? "已收齊" : limit<=2 ? `還缺 ${limit}` : `需求 ${limit}`))
       : isExchange
         ? (sold ? "已換出" : reserved ? "交換預定中" : limit===0 ? "已換出" : `可交換 ${limit}`)
-        : (sold ? "售完" : reserved ? "已預訂" : limit===0 ? "已售完" : `庫存 ${limit}`);
+        : (sold ? "售完" : reserved ? "已預訂" : limit===0 ? (reservedQty>0?`可購買 0｜預定 ${reservedQty}`:"已售完") : reservedQty>0 ? `可購買 ${limit}｜預定 ${reservedQty}` : `庫存 ${limit}`);
 
     card.innerHTML=`
       <div class="card-media">
@@ -2652,7 +2677,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
         ${p.demoVideoPath ? `<button type="button" class="video-badge" title="直接看展示影片"><span class="video-play">▶</span><span class="video-label">展示影片</span></button>` : ""}
       </div>
       <div class="card-body">
-        <div class="badge-row"><span class="badge">${esc(p.category)}</span>${isNewActive(p)?`<span class="new-badge">新品</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}${sold?`<span class="sold-badge">${isExchange?"已換出":"售完"}</span>`:""}</div>
+        <div class="badge-row"><span class="badge">${esc(p.category)}</span>${isNewActive(p)?`<span class="new-badge">新品</span>`:""}${reserved?`<span class="reserved-badge">已預訂</span>`:""}${!reserved&&reservedQty>0?`<span class="reserved-qty-note">預定 ${reservedQty}</span>`:""}${sold?`<span class="sold-badge">${isExchange?"已換出":"售完"}</span>`:""}</div>
         ${isExchange ? (()=>{
           const offers=(Array.isArray(p.exchangeOffers)&&p.exchangeOffers.length
             ? p.exchangeOffers
@@ -2713,12 +2738,12 @@ $("#productCount").textContent=`${list.length} 件商品`;
         `:`
           ${isExchange ? `<div class="exchange-note">若要交換請私訊我DC</div>` : `
           ${variants.length
-  ? `<div class="variant-picker"><span>款式</span><select class="variant-select">${variants.map(v=>`<option value="${esc(v.name)}" ${v.stock===0?"disabled":""}>${esc(v.name)}｜${isBuy?"需求":"庫存"} ${v.stock}</option>`).join("")}</select></div>`
+  ? `<div class="variant-picker"><span>款式</span><select class="variant-select">${variants.map(v=>{const av=isBuy?v.stock:variantAvailableStock(p,v.name), rv=isBuy?0:variantReserved(p,v.name);return `<option value="${esc(v.name)}" ${av===0?"disabled":""}>${esc(v.name)}｜${isBuy?`需求 ${v.stock}`:(rv>0?`可購 ${av}・預定 ${rv}`:`庫存 ${v.stock}`)}</option>`}).join("")}</select></div>`
   : `<div class="variant-picker variant-placeholder"><span>款式</span><select class="variant-select" disabled><option>無款式</option></select></div>`
 }
           <div class="buy-actions ${isBuy?"offer-actions":""}">
             <span class="qty-label">${isBuy?"提供數量":"數量"}</span>
-            <input class="qty" type="number" min="1" max="${variants.length?variantStock(p,defaultVariant):limit}" value="${Math.max(1,selectedQty||1)}" ${(limit===0||reserved||sold)?"disabled":""}>
+            <input class="qty" type="number" min="1" max="${variants.length?(isBuy?variantStock(p,defaultVariant):variantAvailableStock(p,defaultVariant)):limit}" value="${Math.max(1,selectedQty||1)}" ${(limit===0||reserved||sold)?"disabled":""}>
             <button class="btn primary add-cart ${(reserved||sold)?"reserved-disabled":""}" ${(limit===0||reserved||sold)?"disabled":""}>${
               sold
                 ? "售完"
@@ -2841,7 +2866,7 @@ $("#productCount").textContent=`${list.length} 件商品`;
         };
 
         variantSelect.onchange=()=>{
-          const lim=variantStock(p,variantSelect.value);
+          const lim=isBuy?variantStock(p,variantSelect.value):variantAvailableStock(p,variantSelect.value);
           qtyInput.max=lim;
           qtyInput.value=1;
           qtyInput.disabled=lim===0;
@@ -2917,13 +2942,15 @@ function catalogVariantRows(p){
     if(typeof v==="string") return {name:v,qty:null};
     const name=String(v?.name ?? v?.label ?? v?.title ?? v?.variant ?? "").trim();
     const q=Number(v?.stock ?? v?.qty ?? v?.quantity);
-    return {name,qty:Number.isFinite(q)?q:null};
+    const rv=Math.max(0,Math.floor(Number(v?.reserved ?? v?.reservedQty)||0));
+    const total=Number.isFinite(q)?Math.max(0,Math.floor(q)):null;
+    return {name,qty:total===null?null:Math.max(0,total-Math.min(total,rv)),reserved:total===null?0:Math.min(total,rv)};
   }).filter(v=>v.name);
 }
 
 function catalogWrapVariantLines(ctx, rows, maxWidth){
   if(!rows.length)return [];
-  const parts=rows.map(v=>v.qty===null ? v.name : `${v.name} ×${v.qty}`);
+  const parts=rows.map(v=>v.qty===null ? v.name : (v.reserved>0 ? `${v.name} ×${v.qty}（預定${v.reserved}）` : `${v.name} ×${v.qty}`));
   const lines=[];
   let line="";
   for(const part of parts){
@@ -3248,7 +3275,7 @@ async function generateProductCatalogImage(selectedFile=null){
             ctx.fillStyle="#493a32";
             ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
 
-            const catalogStock=p._catalogVariant ? p._catalogVariant.stock : (Number.isFinite(Number(p._catalogStock)) ? Number(p._catalogStock) : getStock(p));
+            const catalogStock=p._catalogVariant ? p._catalogVariant.stock : (Number.isFinite(Number(p._catalogStock)) ? Number(p._catalogStock) : (group.mode==="buy"?getStock(p):getAvailableStock(p)));
             if(group.mode==="exchange"){
               const offers=normalizeExchangeOffers(p).filter(o=>o && (o.name||o.imageData));
               const offerNames=offers.map(o=>o.name).filter(Boolean).join("＋");
@@ -3272,7 +3299,7 @@ async function generateProductCatalogImage(selectedFile=null){
               const priceText=group.mode==="freeOffer" ? "自由出價" : productPriceLabel(p);
               const stockText=group.mode==="buy"
                 ? `需求 ×${catalogStock}`
-                : `×${catalogStock}`;
+                : (getReserved(p)>0 && !getVariants(p).length ? `×${catalogStock}・預定${getReserved(p)}` : `×${catalogStock}`);
               const priceY=cy+imageH+(hasCatalogVariant?56:44);
 
               ctx.font='700 18px Arial,"Microsoft JhengHei",sans-serif';
@@ -3391,12 +3418,13 @@ async function compressImage(file){
   return out;
 }
 
-function addVariantRow(name="",stock=0,imageData=""){
+function addVariantRow(name="",stock=0,imageData="",reserved=0){
   const row=document.createElement("div"); row.className="variant-row";
   row.dataset.imageData=imageData||"";
   row.innerHTML=`
     <input class="variant-name" placeholder="例如：黑色" value="${esc(name)}">
-    <input class="variant-stock-input" type="number" min="0" step="1" value="${Math.max(0,Math.floor(Number(stock)||0))}">
+    <input class="variant-stock-input" type="number" min="0" step="1" value="${Math.max(0,Math.floor(Number(stock)||0))}" title="總庫存" placeholder="庫存">
+    <input class="variant-reserved-input" type="number" min="0" step="1" value="${Math.max(0,Math.min(Math.floor(Number(stock)||0),Math.floor(Number(reserved)||0)))}" title="預定數量" placeholder="預定">
     <label class="variant-image-btn" title="款式圖片（選填）">
       <span>圖片</span>
       <input class="variant-image-input" type="file" accept="image/*">
@@ -3420,10 +3448,11 @@ function addVariantRow(name="",stock=0,imageData=""){
   };
   $("#variantRows").appendChild(row);
 }
-function loadVariantRows(p){$("#variantRows").innerHTML="";getVariants(p).forEach(v=>addVariantRow(v.name,v.stock,v.imageData||""));}
+function loadVariantRows(p){$("#variantRows").innerHTML="";getVariants(p).forEach(v=>addVariantRow(v.name,v.stock,v.imageData||"",v.reserved||0));}
 function collectVariants(){return $$(".variant-row",$("#variantRows")).map(r=>({
   name:r.querySelector(".variant-name").value.trim(),
   stock:Math.max(0,Math.floor(Number(r.querySelector(".variant-stock-input").value)||0)),
+  reserved:(()=>{const st=Math.max(0,Math.floor(Number(r.querySelector(".variant-stock-input").value)||0));return Math.min(st,Math.max(0,Math.floor(Number(r.querySelector(".variant-reserved-input")?.value)||0)));})(),
   imageData:r.dataset.imageData||""
 })).filter(v=>v.name);}
 
@@ -3434,6 +3463,7 @@ function updateProductFormMode(){
 
   $("#stockFieldLabel").textContent=exchange ? "可交換數量" : "庫存";
   $("#stockNumberField")?.classList.toggle("hidden",buy);
+  $("#reservedNumberField")?.classList.toggle("hidden",buy||exchange);
   $("#purchaseQtyTextField")?.classList.toggle("hidden",!buy);
   if($("#productStock")) $("#productStock").required=!buy;
   const buyerOffer=!!$("#productBuyerOffer")?.checked && !buy && !exchange;
@@ -3472,6 +3502,7 @@ function openProduct(p=null){
   $("#discountPrice").value=p?.discountPrice??"";
   $("#discountText").value=p?.discountText||"";
   $("#productStock").value=getVariants(p).length?0:(Number.isFinite(Number(p?.stock))?Number(p.stock):1);
+  if($("#productReserved")) $("#productReserved").value=getVariants(p).length?0:getReserved(p);
   $("#purchaseQtyText").value=p?.purchaseQtyText||"";
   if($("#productRecentFeatured")) $("#productRecentFeatured").checked=!!p?.recentFeatured;
   if($("#productIsNew")) $("#productIsNew").checked=!!p && isNewActive(p);
@@ -3705,6 +3736,7 @@ $("#productForm").addEventListener("submit", async e=>{
         : (variants.length
           ? variants.reduce((sum,v)=>sum+v.stock,0)
           : Math.max(0,Math.floor(Number($("#productStock").value)||0))),
+      reservedQty:$("#productCategory").value==="收購區" || variants.length ? 0 : Math.min(Math.max(0,Math.floor(Number($("#productStock").value)||0)),Math.max(0,Math.floor(Number($("#productReserved")?.value)||0))),
       purchaseQtyText:$("#productCategory").value==="收購區" ? ($("#purchaseQtyText")?.value||"").trim() : "",
       variants,
       imageData:isExchange ? cleanExchangeOffers[0].imageData : editingImage,
@@ -4044,9 +4076,9 @@ async function checkoutSaleCart(orderInfo){
     if(variants.length){
       const v=variants.find(v=>v.name===item.variant);
       if(!v) throw new Error(`「${p.name||"商品"}」的款式已變更`);
-      if(v.stock<item.qty) throw new Error(`「${p.name||"商品"} ${item.variant}」庫存不足`);
-    }else if(getStock(p)<item.qty){
-      throw new Error(`「${p.name||"商品"}」庫存不足`);
+      if(variantAvailableStock(p,item.variant)<item.qty) throw new Error(`「${p.name||"商品"} ${item.variant}」可購買庫存不足`);
+    }else if(getAvailableStock(p)<item.qty){
+      throw new Error(`「${p.name||"商品"}」可購買庫存不足`);
     }
     orderItems.push({id:item.id,name:String(p.name||"商品"),variant:item.variant,qty:item.qty,price:Number(p.price)||0});
   }
@@ -4112,11 +4144,12 @@ function renderOrders(){
         <div class="order-admin-row"><label>我的備註</label><textarea class="order-admin-input order-admin-note" maxlength="500" data-order-seller-note="${esc(o.id)}" placeholder="自己看的備註">${esc(o.sellerNote||"")}</textarea></div>
         <button class="btn order-admin-save" type="button" data-order-save="${esc(o.id)}">儲存金額與備註</button>
       </div>
-      <div class="order-actions">${pending?`<button class="btn primary" type="button" data-order-done="${esc(o.id)}">完成交易</button><button class="btn" type="button" data-order-cancel="${esc(o.id)}">取消訂單</button>`:""}<button class="btn order-delete" type="button" data-order-delete="${esc(o.id)}">刪除訂單</button></div>
+      <div class="order-actions">${pending?`<button class="btn primary" type="button" data-order-done="${esc(o.id)}">完成交易</button><button class="btn" type="button" data-order-reserved-done="${esc(o.id)}">使用預定庫存完成</button><button class="btn" type="button" data-order-cancel="${esc(o.id)}">取消訂單</button>`:""}<button class="btn order-delete" type="button" data-order-delete="${esc(o.id)}">刪除訂單</button></div>
     </article>`;
   }).join("");
   box.querySelectorAll("[data-order-save]").forEach(b=>b.onclick=()=>saveOrderAdminFields(b.dataset.orderSave,b));
   box.querySelectorAll("[data-order-done]").forEach(b=>b.onclick=()=>completeOrder(b.dataset.orderDone,b));
+  box.querySelectorAll("[data-order-reserved-done]").forEach(b=>b.onclick=()=>completeReservedOrder(b.dataset.orderReservedDone,b));
   box.querySelectorAll("[data-order-cancel]").forEach(b=>b.onclick=()=>cancelOrder(b.dataset.orderCancel,b));
   box.querySelectorAll("[data-order-delete]").forEach(b=>b.onclick=()=>deleteOrder(b.dataset.orderDelete,b));
 }
@@ -4176,11 +4209,11 @@ async function completeOrder(orderId,btn){
         const p={id:snap.id,...snap.data()}, qty=Math.max(1,Number(item.qty)||1), vars=getVariants(p);
         if(vars.length){
           const idx=vars.findIndex(v=>v.name===String(item.variant||""));
-          if(idx<0||vars[idx].stock<qty)throw new Error(`「${p.name||"商品"}${item.variant?` ${item.variant}`:""}」庫存不足`);
+          if(idx<0||variantAvailableStock(p,String(item.variant||""))<qty)throw new Error(`「${p.name||"商品"}${item.variant?` ${item.variant}`:""}」可購買庫存不足`);
           vars[idx]={...vars[idx],stock:vars[idx].stock-qty};
           tx.update(ref,{variants:vars,stock:vars.reduce((n,v)=>n+v.stock,0),updatedAt:serverTimestamp()});
         }else{
-          const stock=getStock(p);if(stock<qty)throw new Error(`「${p.name||"商品"}」庫存不足`);
+          const stock=getStock(p);if(getAvailableStock(p)<qty)throw new Error(`「${p.name||"商品"}」可購買庫存不足`);
           tx.update(ref,{stock:stock-qty,updatedAt:serverTimestamp()});
         }
       }
@@ -4189,6 +4222,65 @@ async function completeOrder(orderId,btn){
     toast("交易完成，庫存已扣除");
   }catch(e){console.error(e);alert(e?.message||"完成交易失敗");}
   finally{btn.disabled=false;btn.textContent="完成交易";}
+}
+async function completeReservedOrder(orderId,btn){
+  if(!isAdmin()||!orderId)return;
+  const order=adminOrders.find(o=>o.id===orderId);
+  if(!confirm(`確定要用「預定庫存」完成訂單 ${order?.orderNumber||orderId} 嗎？\n\n完成後會同時扣除實際庫存與預定數量。`))return;
+  btn.disabled=true;btn.textContent="處理中…";
+  try{
+    await runTransaction(db,async tx=>{
+      const oref=doc(db,"orders",orderId);
+      const osnap=await tx.get(oref);
+      if(!osnap.exists())throw new Error("找不到這筆訂單");
+      const orderData=osnap.data();
+      if(orderData.status!=="待交易")throw new Error("這筆訂單已處理");
+
+      // 同一商品可能包含不同款式，先依商品彙整，避免同一文件被多次覆寫。
+      const groups=new Map();
+      for(const item of (orderData.items||[])){
+        const id=String(item.id||"");
+        if(!id)throw new Error("訂單內有商品資料不完整");
+        if(!groups.has(id))groups.set(id,[]);
+        groups.get(id).push(item);
+      }
+
+      const loaded=[];
+      for(const [productId,items] of groups){
+        const ref=doc(db,"products",productId);
+        const snap=await tx.get(ref);
+        loaded.push({ref,snap,items});
+      }
+
+      for(const {ref,snap,items} of loaded){
+        if(!snap.exists())throw new Error(`「${items[0]?.name||"商品"}」已下架`);
+        const p={id:snap.id,...snap.data()};
+        const vars=getVariants(p);
+        if(vars.length){
+          const nextVars=vars.map(v=>({...v}));
+          for(const item of items){
+            const qty=Math.max(1,Number(item.qty)||1);
+            const variantName=String(item.variant||"");
+            const idx=nextVars.findIndex(v=>v.name===variantName);
+            if(idx<0)throw new Error(`「${p.name||"商品"}${variantName?` ${variantName}`:""}」找不到此款式`);
+            const reserved=Math.min(nextVars[idx].stock,Math.max(0,Number(nextVars[idx].reserved)||0));
+            if(reserved<qty)throw new Error(`「${p.name||"商品"}${variantName?` ${variantName}`:""}」預定數量不足（目前預定 ${reserved}）`);
+            nextVars[idx].stock=Math.max(0,nextVars[idx].stock-qty);
+            nextVars[idx].reserved=Math.max(0,reserved-qty);
+          }
+          tx.update(ref,{variants:nextVars,stock:nextVars.reduce((n,v)=>n+v.stock,0),updatedAt:serverTimestamp()});
+        }else{
+          const totalQty=items.reduce((n,item)=>n+Math.max(1,Number(item.qty)||1),0);
+          const stock=getStock(p), reserved=getReserved(p);
+          if(reserved<totalQty)throw new Error(`「${p.name||"商品"}」預定數量不足（目前預定 ${reserved}）`);
+          tx.update(ref,{stock:Math.max(0,stock-totalQty),reservedQty:Math.max(0,reserved-totalQty),updatedAt:serverTimestamp()});
+        }
+      }
+      tx.update(oref,{status:"已完成",completedAt:serverTimestamp(),completedFromReserved:true});
+    });
+    toast("交易完成，庫存與預定數量已同步扣除");
+  }catch(e){console.error(e);alert(e?.message||"完成預定交易失敗");}
+  finally{btn.disabled=false;btn.textContent="使用預定庫存完成";}
 }
 async function cancelOrder(orderId,btn){
   if(!isAdmin()||!orderId)return;
