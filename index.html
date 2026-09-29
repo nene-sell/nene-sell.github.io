@@ -1386,7 +1386,7 @@ html.page-visible body{visibility:visible;}
 </style>
 
 <style>
-.admin-tools{display:flex;align-items:center;gap:8px}.orders-dialog{width:min(720px,94vw);max-height:88vh}.orders-dialog form{max-height:82vh;overflow:auto}.orders-help{color:var(--muted);margin-top:0}.orders-list{display:grid;gap:12px}.order-card{border:1px solid var(--line);border-radius:16px;padding:14px;background:rgba(255,255,255,.62)}.order-card-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.order-status{font-size:12px;font-weight:800;padding:5px 9px;border-radius:999px;background:var(--panel2)}.status-pending{color:#8b5f35}.status-done{color:#58735b}.status-cancel{color:#9a6666}.order-sub{margin-top:7px;color:var(--muted);font-size:13px}.order-items{margin-top:10px;line-height:1.7}.order-total{margin-top:8px;font-weight:800}.order-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}#ordersBtn{padding:8px 12px;border-radius:999px;position:relative}.orders-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;margin-left:5px;border-radius:999px;background:#b96f62;color:#fff;font-size:11px;font-weight:900;vertical-align:middle}.orders-badge.hidden{display:none}.order-delete{margin-left:auto}@media(max-width:520px){#ordersBtn{font-size:12px;padding:7px 9px}}
+.admin-tools{display:flex;align-items:center;gap:8px}.orders-dialog{width:min(720px,94vw);max-height:88vh}.orders-dialog form{max-height:82vh;overflow:auto}.orders-help{color:var(--muted);margin-top:0}.orders-list{display:grid;gap:12px}.order-card{border:1px solid var(--line);border-radius:16px;padding:14px;background:rgba(255,255,255,.62)}.order-card-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.order-status{font-size:12px;font-weight:800;padding:5px 9px;border-radius:999px;background:var(--panel2)}.status-pending{color:#8b5f35}.status-done{color:#58735b}.status-cancel{color:#9a6666}.order-sub{margin-top:7px;color:var(--muted);font-size:13px}.order-items{margin-top:10px;line-height:1.7}.order-total{margin-top:8px;font-weight:800}.order-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}#ordersBtn{padding:8px 12px;border-radius:999px;position:relative}.orders-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;margin-left:5px;border-radius:999px;background:#b96f62;color:#fff;font-size:11px;font-weight:900;vertical-align:middle}.orders-badge.hidden{display:none}.order-delete{margin-left:auto}.order-admin-edit{margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:12px;background:rgba(248,242,237,.72);display:grid;gap:8px}.order-admin-row{display:grid;grid-template-columns:130px minmax(0,1fr);gap:8px;align-items:center}.order-admin-row label{font-size:13px;font-weight:800;color:var(--text)}.order-admin-input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--text);padding:8px 10px;font:inherit}.order-admin-note{min-height:58px;resize:vertical}.order-admin-save{justify-self:end}@media(max-width:520px){#ordersBtn{font-size:12px;padding:7px 9px}.order-admin-row{grid-template-columns:1fr}.order-admin-save{width:100%}}
 </style>
 
 <style id="order-image-enhancement">
@@ -3902,13 +3902,32 @@ function renderOrders(){
       ${o.tradeId?`<div class="order-extra"><b>交易 ID：</b>${esc(o.tradeId)}</div>`:""}
       ${o.note?`<div class="order-extra"><b>留言：</b>${esc(o.note)}</div>`:""}
       <div class="order-items">${itemText||"—"}</div>
-      <div class="order-total">金額：${total}</div>
+      <div class="order-total">原訂單金額：${total}${o.actualAmount!==undefined&&o.actualAmount!==null&&String(o.actualAmount)!==""?`　｜　實際交易金額：${esc(String(o.actualAmount))}`:""}</div>
+      <div class="order-admin-edit">
+        <div class="order-admin-row"><label>實際交易金額</label><input class="order-admin-input" type="number" min="0" step="1" inputmode="numeric" data-order-amount="${esc(o.id)}" value="${esc(o.actualAmount!==undefined&&o.actualAmount!==null?String(o.actualAmount):String(total))}"></div>
+        <div class="order-admin-row"><label>賣家備註</label><textarea class="order-admin-input order-admin-note" maxlength="500" data-order-seller-note="${esc(o.id)}" placeholder="只有管理員看得到">${esc(o.sellerNote||"")}</textarea></div>
+        <button class="btn order-admin-save" type="button" data-order-save="${esc(o.id)}">儲存金額與備註</button>
+      </div>
       <div class="order-actions">${pending?`<button class="btn primary" type="button" data-order-done="${esc(o.id)}">完成交易</button><button class="btn" type="button" data-order-cancel="${esc(o.id)}">取消訂單</button>`:""}<button class="btn order-delete" type="button" data-order-delete="${esc(o.id)}">刪除訂單</button></div>
     </article>`;
   }).join("");
+  box.querySelectorAll("[data-order-save]").forEach(b=>b.onclick=()=>saveOrderAdminFields(b.dataset.orderSave,b));
   box.querySelectorAll("[data-order-done]").forEach(b=>b.onclick=()=>completeOrder(b.dataset.orderDone,b));
   box.querySelectorAll("[data-order-cancel]").forEach(b=>b.onclick=()=>cancelOrder(b.dataset.orderCancel,b));
   box.querySelectorAll("[data-order-delete]").forEach(b=>b.onclick=()=>deleteOrder(b.dataset.orderDelete,b));
+}
+async function saveOrderAdminFields(orderId,btn){
+  if(!isAdmin()||!orderId)return;
+  const amountEl=document.querySelector(`[data-order-amount="${CSS.escape(orderId)}"]`);
+  const noteEl=document.querySelector(`[data-order-seller-note="${CSS.escape(orderId)}"]`);
+  const amount=Number(amountEl?.value);
+  if(!Number.isFinite(amount)||amount<0){alert("請輸入正確的實際交易金額");amountEl?.focus();return;}
+  btn.disabled=true;
+  try{
+    await updateDoc(doc(db,"orders",orderId),{actualAmount:amount,sellerNote:String(noteEl?.value||"").trim(),adminUpdatedAt:serverTimestamp()});
+    toast("金額與備註已儲存");
+  }catch(e){console.error(e);alert(e?.message||"儲存失敗");}
+  finally{btn.disabled=false;}
 }
 let ordersListenerReady=false;
 function updateOrdersBadge(){
