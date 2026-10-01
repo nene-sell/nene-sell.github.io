@@ -4511,7 +4511,7 @@ document.addEventListener("click",e=>{
 // 目前賣場的圖片實際以 data URL 存在 Firestore 商品文件中；展示影片則是 GitHub Pages/外部網址路徑。
 // 備份採 ZIP：manifest.json + media/images + media/videos，避免把大型媒體全部硬塞進單一 JSON。
 const BACKUP_FORMAT="nene-sell-full-backup";
-const BACKUP_VERSION=1;
+const BACKUP_VERSION=2;
 const BACKUP_COLLECTIONS=["products","orders"];
 
 function backupSafeName(s="file"){
@@ -4629,38 +4629,123 @@ async function addVideoFilesFromDocs(store,zip,assets){
 }
 async function createFullBackup(){
   if(!isAdmin())return;
-  const btn=$("#backupBtn"); const old=btn.textContent; btn.disabled=true;btn.textContent="備份中…";
+  const btn=$("#backupBtn"),old=btn.textContent;
+  btn.disabled=true;
   try{
     if(typeof JSZip!=="function")throw new Error("備份工具尚未載入，請重新整理後再試");
+
+    btn.textContent="⏳ 讀取賣場資料…";
     const raw=await collectAllStoreDocs();
-    const zip=new JSZip(), assets=[];
-    const portable={};
+    const productCount=(raw.products||[]).length;
+    const orderCount=(raw.orders||[]).length;
+
+    const zip=new JSZip(),assets=[],portable={};
+    const allRows=Object.values(raw).reduce((n,rows)=>n+(rows?.length||0),0);
+    let processedRows=0;
+
     for(const [collectionName,docs] of Object.entries(raw)){
       portable[collectionName]=[];
       for(const row of docs){
-        portable[collectionName].push({id:row.id,data:await externalizeDataUrls(row.data,zip,assets,[collectionName,row.id])});
+        portable[collectionName].push({
+          id:row.id,
+          data:await externalizeDataUrls(row.data,zip,assets,[collectionName,row.id])
+        });
+        processedRows++;
+        btn.textContent=`⏳ 整理資料 ${processedRows}/${Math.max(1,allRows)}`;
+        if(processedRows%5===0)await new Promise(r=>setTimeout(r,0));
       }
     }
+
+    btn.textContent="⏳ 收集展示影片…";
     await addVideoFilesFromDocs(raw,zip,assets);
-    const now=new Date();
-    const manifest={
-      format:BACKUP_FORMAT,version:BACKUP_VERSION,createdAt:now.toISOString(),
-      source:{projectId:firebaseConfig.projectId,authDomain:firebaseConfig.authDomain,storageBucket:firebaseConfig.storageBucket,siteOrigin:location.origin,siteUrl:location.href},
-      architecture:{firestoreCollections:BACKUP_COLLECTIONS,imageStorage:"Firestore document data URLs (exported as media/images files in this ZIP)",videoStorage:"GitHub Pages / external URL paths referenced by Firestore demoVideoPath; reachable video bytes are copied into media/videos",firebaseStorageUsedByCurrentCode:false},
-      restoreNotes:["Firestore products/orders are restored with their original document IDs and fields.","Image files are re-embedded into their original Firestore fields on restore.","Video references are restored to their original paths/URLs. The packaged media/videos files must also be uploaded to the new website/storage when moving away from the old host."],
-      assets,collections:portable
-    };
-    zip.file("manifest.json",JSON.stringify(manifest,null,2));
-    zip.file("README.txt","內內販售賣場完整備份\n\n此 ZIP 內含 manifest.json、商品/訂單完整 Firestore 資料、圖片檔，以及備份時可取得的展示影片檔。\n搬到新網站時，請把 media/videos 內影片上傳到新網站並維持/更新 manifest 中記錄的原始路徑。\n");
-    const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}});
-    const a=document.createElement("a");a.href=URL.createObjectURL(blob);
-    a.download=`nene-sell-full-backup-${now.toISOString().slice(0,19).replace(/[T:]/g,"-")}.zip`;
-    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+
+    const imageAssets=assets.filter(x=>x.kind==="image");
+    const videoAssets=assets.filter(x=>x.kind==="video"&&!x.backupError);
     const failedVideos=assets.filter(x=>x.kind==="video"&&x.backupError);
-    if(failedVideos.length)alert(`備份已完成，但有 ${failedVideos.length} 個影片因瀏覽器跨網域/檔案不存在而無法把影片本體抓進 ZIP。\n影片路徑與錯誤資訊已保留在 manifest.json，請另外保留這些影片檔。`);
-    toast("完整備份已下載");
-  }catch(e){console.error(e);alert(e?.message||"完整備份失敗");}
-  finally{btn.disabled=false;btn.textContent=old;}
+    const now=new Date();
+
+    const manifest={
+      format:BACKUP_FORMAT,
+      version:BACKUP_VERSION,
+      createdAt:now.toISOString(),
+      source:{
+        projectId:firebaseConfig.projectId,
+        authDomain:firebaseConfig.authDomain,
+        storageBucket:firebaseConfig.storageBucket,
+        siteOrigin:location.origin,
+        siteUrl:location.href
+      },
+      summary:{
+        products:productCount,
+        orders:orderCount,
+        images:imageAssets.length,
+        videos:videoAssets.length,
+        failedVideos:failedVideos.length
+      },
+      architecture:{
+        firestoreCollections:BACKUP_COLLECTIONS,
+        imageStorage:"Firestore document data URLs (exported as media/images files in this ZIP)",
+        videoStorage:"GitHub Pages / external URL paths referenced by Firestore demoVideoPath; reachable video bytes are copied into media/videos",
+        firebaseStorageUsedByCurrentCode:false
+      },
+      restoreNotes:[
+        "Firestore products/orders are restored with their original document IDs and fields.",
+        "Category visibility/settings stored in products are included because the complete products collection is exported.",
+        "Image files are re-embedded into their original Firestore fields on restore.",
+        "Video references are restored to their original paths/URLs. Packaged media/videos files must also be uploaded to the destination website/storage when moving hosts."
+      ],
+      assets,
+      collections:portable
+    };
+
+    zip.file("manifest.json",JSON.stringify(manifest,null,2));
+    zip.file("README.txt",
+`內內販售賣場完整備份 v2
+
+商品：${productCount} 筆
+訂單：${orderCount} 筆
+圖片：${imageAssets.length} 個
+成功打包影片：${videoAssets.length} 個
+未能抓取影片：${failedVideos.length} 個
+
+此 ZIP 內含：
+- manifest.json
+- products / orders 完整 Firestore 資料
+- 商品圖片 media/images
+- 備份時可取得的展示影片 media/videos
+- 商品分類顯示設定（因其儲存在 products 集合內）
+
+搬到新網站時，影片本體仍需放到新網站對應的 videos 路徑。
+`);
+
+    btn.textContent="⏳ 壓縮備份檔…";
+    const blob=await zip.generateAsync(
+      {type:"blob",compression:"DEFLATE",compressionOptions:{level:6}},
+      meta=>{btn.textContent=`⏳ 壓縮 ${Math.round(meta.percent||0)}%`;}
+    );
+
+    btn.textContent="⏳ 準備下載…";
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=`nene-sell-full-backup-v2-${now.toISOString().slice(0,19).replace(/[T:]/g,"-")}.zip`;
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
+
+    const msg=
+      `完整備份 v2 已完成。\n\n`+
+      `商品：${productCount} 筆\n訂單：${orderCount} 筆\n`+
+      `圖片：${imageAssets.length} 個\n影片：${videoAssets.length} 個`+
+      (failedVideos.length?`\n\n⚠️ 有 ${failedVideos.length} 個影片無法由瀏覽器抓取本體；影片路徑與錯誤資訊已保留在 manifest.json。`:"");
+    alert(msg);
+    toast("完整備份 v2 已下載");
+  }catch(e){
+    console.error(e);
+    alert("完整備份失敗｜"+(e?.message||String(e)));
+  }finally{
+    btn.disabled=false;
+    btn.textContent=old;
+  }
 }
 async function validateBackupZip(file){
   if(typeof JSZip!=="function")throw new Error("備份工具尚未載入");
